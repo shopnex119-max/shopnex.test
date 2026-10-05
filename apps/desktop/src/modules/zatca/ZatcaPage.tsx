@@ -1,14 +1,10 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, ArrowUpLeft, CheckCircle2, CircleHelp, Cloud, Code2, FileCheck2, FileKey2, FileText, Fingerprint, Globe2, History, KeyRound, LockKeyhole, RefreshCw, Save, Shield, ShieldCheck, Upload, XCircle } from 'lucide-react';
-import { getZatcaConfig, saveZatcaConfig, type ZatcaPublicConfig } from '../../app/api';
+import { QRCodeSVG } from 'qrcode.react';
+import { getInvoices, getPhase1InvoiceQr, getZatcaConfig, saveZatcaConfig, type SavedInvoice, type ZatcaPublicConfig } from '../../app/api';
 import type { AppLanguage } from '../../app/types';
 
 type Tab = 'overview' | 'documents' | 'logs';
-const sampleDocs = [
-  { id: 'INV-2047', uuid: 'a8f70c…4d21', kind: 'فاتورة ضريبية', state: 'draft', date: '02 أكتوبر 2026 · 10:18', note: 'لم تبدأ عملية الإرسال' },
-  { id: 'INV-2046', uuid: '1c035b…8f72', kind: 'فاتورة مبسطة', state: 'pending', date: '02 أكتوبر 2026 · 09:56', note: 'تنتظر إعداد بيئة الربط' },
-  { id: 'CN-0012', uuid: '7b1b0d…a621', kind: 'إشعار دائن', state: 'error', date: '01 أكتوبر 2026 · 16:24', note: 'مثال توضيحي — غير مرسل' },
-];
 
 export default function ZatcaPage({ lang, demoMode }: { lang: AppLanguage; demoMode: boolean }) {
   const isAr = lang === 'ar';
@@ -88,7 +84,7 @@ export default function ZatcaPage({ lang, demoMode }: { lang: AppLanguage; demoM
         <article className="panel quick-stats-panel"><div className="panel-heading"><div><span className="eyebrow">{t('حالة المستندات','DOCUMENT STATUS')}</span><h2>{t('ملخص الإرسال','Submission summary')}</h2></div><FileCheck2 size={17}/></div><div className="status-stat-list"><StatusStat label={t('بانتظار التحقق','Awaiting validation')} count="—" kind="amber"/><StatusStat label={t('مقبولة / مسجلة','Accepted / reported')} count="—" kind="green"/><StatusStat label={t('مرفوضة / بها خطأ','Rejected / with errors')} count="—" kind="red"/></div><p className="stat-footnote">{t('لا توجد وثائق حقيقية مرسلة من هذا الإصدار.','No real documents have been submitted by this build.')}</p></article>
       </aside>
     </div>}
-    {tab === 'documents' && <DocumentsTab lang={lang}/>}
+    {tab === 'documents' && <DocumentsTab lang={lang} demoMode={demoMode}/>}
     {tab === 'logs' && <LogsTab lang={lang}/>}
   </section>;
 }
@@ -98,9 +94,55 @@ function StatusStat({ label, count, kind }: { label: string; count: string; kind
 function Help() { return <span className="help-tip" title="راجع مستندات زاتكا الرسمية"><CircleHelp size={13}/></span>; }
 function SettingsIcon() { return <ShieldCheck size={16}/>; }
 
-function DocumentsTab({ lang }: { lang: AppLanguage }) {
+function DocumentsTab({ lang, demoMode }: { lang: AppLanguage; demoMode: boolean }) {
   const ar = lang === 'ar';
-  return <article className="panel document-list-panel"><div className="panel-heading"><div><span className="eyebrow">{ar ? 'سجل الفواتير' : 'INVOICE REGISTER'}</span><h2>{ar ? 'الوثائق الإلكترونية' : 'Electronic documents'}</h2><p>{ar ? 'أمثلة توضيحية فقط — لم تُرسل إلى زاتكا.' : 'Illustrative records only — nothing has been sent to ZATCA.'}</p></div><button className="button button-outline" disabled><ArrowUpLeft size={14}/>{ar ? 'تصدير سجل' : 'Export register'}</button></div><div className="invoice-table-wrap"><table className="data-table zatca-doc-table"><thead><tr><th>{ar ? 'رقم المستند' : 'Document'}</th><th>UUID</th><th>{ar ? 'النوع' : 'Type'}</th><th>{ar ? 'التاريخ' : 'Date'}</th><th>{ar ? 'الحالة' : 'Status'}</th><th>{ar ? 'ملاحظة' : 'Note'}</th></tr></thead><tbody>{sampleDocs.map((doc) => <tr key={doc.id}><td><b className="mono-cell">{doc.id}</b></td><td><code>{doc.uuid}</code></td><td>{doc.kind}</td><td className="muted-cell">{doc.date}</td><td><span className={`status-chip ${doc.state === 'draft' ? 'slate' : doc.state === 'pending' ? 'amber' : 'red'}`}><i/>{doc.state === 'draft' ? (ar ? 'مسودة' : 'Draft') : doc.state === 'pending' ? (ar ? 'معلق' : 'Pending') : (ar ? 'خطأ' : 'Error')}</span></td><td className="muted-cell">{doc.note}</td></tr>)}</tbody></table></div><div className="safe-empty-note"><AlertTriangle size={15}/>{ar ? 'زر الإرسال الفعلي غير متاح قبل التحقق من مواصفات API الرسمية وربط منشأتك في Sandbox.' : 'Real submission stays unavailable until official API specifications are verified and your taxpayer is onboarded in the sandbox.'}</div></article>;
+  const t = (a: string, e: string) => ar ? a : e;
+  const previewInvoice: SavedInvoice = { id: 'preview-invoice-001', invoice_number: 'INV-PREVIEW-001', status: 'paid', subtotal: '100.00', discount_total: '0.00', taxable_subtotal: '100.00', vat_total: '15.00', total: '115.00', amount_paid: '115.00', change_due: '0.00', currency: 'SAR', created_at: '2026-10-05T11:00:00Z' };
+  const [invoices, setInvoices] = useState<SavedInvoice[]>(demoMode ? [previewInvoice] : []);
+  const [selectedId, setSelectedId] = useState(demoMode ? previewInvoice.id : '');
+  const [qr, setQr] = useState<{ qr_base64: string; tags: { tag: number; length: number; value: string }[]; disclaimer: string } | null>(null);
+  const [loading, setLoading] = useState(!demoMode);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const selectedInvoice = invoices.find((invoice) => invoice.id === selectedId);
+
+  useEffect(() => {
+    let active = true;
+    if (demoMode) { setInvoices([previewInvoice]); setSelectedId(previewInvoice.id); setLoading(false); return () => { active = false; }; }
+    setLoading(true); setError('');
+    getInvoices().then((rows) => { if (active) { setInvoices(rows); setSelectedId(rows[0]?.id ?? ''); } })
+      .catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : t('تعذر تحميل سجل الفواتير.','Could not load invoice register.')); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [demoMode]);
+
+  const generateQr = async () => {
+    if (!selectedInvoice) return;
+    setBusy(true); setError(''); setQr(null);
+    try {
+      if (demoMode) {
+        const values = [
+          [1, 'متجر العرض التجريبي'], [2, '310000000000003'], [3, selectedInvoice.created_at],
+          [4, selectedInvoice.total], [5, selectedInvoice.vat_total],
+        ] as [number, string][];
+        const bytes: number[] = [];
+        const tags = values.map(([tag, value]) => {
+          const encoded = new TextEncoder().encode(value);
+          bytes.push(tag, encoded.length, ...encoded);
+          return { tag, length: encoded.length, value };
+        });
+        const binary = bytes.map((byte) => String.fromCharCode(byte)).join('');
+        setQr({ qr_base64: btoa(binary), tags, disclaimer: t('QR توضيحي محلي من خمسة وسوم بصيغة المرحلة الأولى فقط؛ ليس اعتماد زاتكا ولا Phase 2.','Illustrative local five-tag Phase 1-format QR only; not ZATCA approval or Phase 2.') });
+      } else {
+        const result = await getPhase1InvoiceQr(selectedInvoice.id);
+        setQr(result);
+      }
+    } catch (e) { setError(e instanceof Error ? e.message : t('تعذر توليد معاينة QR.','Could not generate QR preview.')); }
+    finally { setBusy(false); }
+  };
+
+  return <div className="zatca-documents-grid"><article className="panel document-list-panel"><div className="panel-heading"><div><span className="eyebrow">{t('سجل المبيعات المحلي','LOCAL SALES REGISTER')}</span><h2>{t('فواتير البيع','Sales invoices')}</h2><p>{t('يعرض الفواتير المحفوظة محليًا. حالة الدفع لا تعني الإرسال إلى زاتكا.','Lists locally saved invoices. Payment status is not a ZATCA submission status.')}</p></div><FileText size={18}/></div><div className="invoice-table-wrap"><table className="data-table zatca-doc-table"><thead><tr><th>{t('رقم الفاتورة','Invoice')}</th><th>{t('التاريخ','Date')}</th><th>{t('الحالة المحلية','Local status')}</th><th>{t('الإجمالي','Total')}</th><th/></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice.id} className={selectedId === invoice.id ? 'selected-row' : ''}><td><b className="mono-cell">{invoice.invoice_number}</b></td><td className="muted-cell">{new Date(invoice.created_at).toLocaleDateString(ar ? 'ar-SA' : 'en-GB')}</td><td><span className="status-chip slate"><i/>{invoice.status}</span></td><td>{invoice.total} {t('ر.س','SAR')}</td><td><button className="button button-outline compact" onClick={() => { setSelectedId(invoice.id); setQr(null); }}>{t('اختيار','Select')}</button></td></tr>)}</tbody></table>{loading && <div className="module-empty">{t('جارٍ تحميل الفواتير…','Loading invoices…')}</div>}{!loading && !invoices.length && <div className="module-empty">{t('لا توجد فواتير بيع بعد. احفظ فاتورة من شاشة الكاشير أولًا.','No sales invoices yet. Save one from the cashier first.')}</div>}</div>{error && <div className="finance-alert error"><AlertTriangle size={15}/><span>{error}</span></div>}</article>
+    <article className="panel qr-preview-panel"><div className="panel-heading"><div><span className="eyebrow">{t('توليد محلي · ٥ وسوم TLV','LOCAL GENERATION · 5 TLV TAGS')}</span><h2>{t('معاينة QR للفواتير','Invoice QR preview')}</h2></div><Shield size={18}/></div><p className="qr-phase-note">{t('ينشئ الخادم ترميز TLV/Base64 للوسوم 1–5 فقط بعد ضبط الاسم النظامي ورقم VAT في إعدادات زاتكا.','The server builds TLV/Base64 tags 1–5 after configuring the legal seller name and VAT number in ZATCA settings.')}</p><button className="button button-primary" disabled={!selectedInvoice || busy || loading} onClick={() => void generateQr()}>{busy ? <RefreshCw className="spin" size={14}/> : <FileCheck2 size={14}/ >}{busy ? t('جارٍ التوليد…','Generating…') : t('إنشاء معاينة QR','Generate QR preview')}</button>{qr && <><div className="qr-render"><QRCodeSVG value={qr.qr_base64} size={184} bgColor="#ffffff" fgColor="#102b2a" level="M" includeMargin/></div><code className="qr-payload">{qr.qr_base64}</code><div className="invoice-table-wrap qr-tags-wrap"><table className="data-table finance-table"><thead><tr><th>TLV</th><th>{t('الطول (بايت UTF-8)','Length (UTF-8 bytes)')}</th><th>{t('القيمة','Value')}</th></tr></thead><tbody>{qr.tags.map((tag) => <tr key={tag.tag}><td>{tag.tag}</td><td>{tag.length}</td><td className="qr-tag-value">{tag.value}</td></tr>)}</tbody></table></div><div className="finance-alert warning qr-disclaimer"><AlertTriangle size={16}/><span>{qr.disclaimer} {t('لا يوجد اتصال أو إرسال إلى الجهة.','No authority connection or submission occurred.')}</span></div></>}{!qr && <div className="qr-empty"><FileCheck2 size={23}/><span>{selectedInvoice ? t(`الفاتورة المحددة: ${selectedInvoice.invoice_number}` ,`Selected invoice: ${selectedInvoice.invoice_number}`) : t('اختر فاتورة لإنشاء QR.','Select an invoice to build a QR.')}</span></div>}<div className="finance-alert info"><ShieldCheck size={15}/><span>{t('مرحلة 2 تتطلب بيانات تشفير حقيقية وتوقيع/تجزئة وتدفق اعتماد/إبلاغ. لا نضع وسومًا تشفيرية وهمية ولا ندّعي الامتثال.','Phase 2 requires real cryptographic data, signatures/hashes and clearance/reporting flows. We do not add fake cryptographic tags or claim compliance.')}</span></div></article></div>;
 }
 function LogsTab({ lang }: { lang: AppLanguage }) {
   const ar = lang === 'ar';

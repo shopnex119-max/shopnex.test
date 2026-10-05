@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import {
   Activity, BarChart3, Bell, BriefcaseBusiness, Building2,
   ChefHat, ChevronDown, ChevronLeft, CircleHelp,
@@ -18,12 +18,15 @@ import ModuleWorkspace from '../modules/workspace/ModuleWorkspace';
 import PosPage from '../modules/pos/PosPage';
 import KitchenPage from '../modules/restaurant/KitchenPage';
 import GuestPage from '../modules/restaurant/GuestPage';
+import PurchasingPage from '../modules/purchasing/PurchasingPage';
+import AccountingPage from '../modules/accounting/AccountingPage';
+const ReportsPage = lazy(() => import('../modules/reports/ReportsPage'));
 
 const nav: AppPage[] = [
   { key: 'overview', label: 'نظرة عامة', labelEn: 'Overview', icon: 'dashboard', group: 'مركز القيادة', groupEn: 'Command center', ready: true },
   { key: 'sales', label: 'الكاشير ونقطة البيع', labelEn: 'Cashier & POS', icon: 'pos', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'invoices', label: 'الفواتير والمبيعات', labelEn: 'Invoices & sales', icon: 'invoice', group: 'التشغيل', groupEn: 'Operations', ready: true },
-  { key: 'purchasing', label: 'المشتريات', labelEn: 'Purchasing', icon: 'purchase', group: 'التشغيل', groupEn: 'Operations' },
+  { key: 'purchasing', label: 'المشتريات', labelEn: 'Purchasing', icon: 'purchase', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'inventory', label: 'المخزون والمستودعات', labelEn: 'Inventory & warehouses', icon: 'inventory', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'products', label: 'المنتجات', labelEn: 'Products', icon: 'products', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'customers', label: 'العملاء والموردون', labelEn: 'Customers & suppliers', icon: 'users', group: 'العلاقات', groupEn: 'Relationships' },
@@ -31,9 +34,9 @@ const nav: AppPage[] = [
   { key: 'kitchen', label: 'شاشة المطبخ', labelEn: 'Kitchen display', icon: 'kitchen', group: 'الضيافة', groupEn: 'Hospitality', ready: true },
   { key: 'guest', label: 'شاشة الضيف والطلب', labelEn: 'Guest ordering screen', icon: 'guest', group: 'الضيافة', groupEn: 'Hospitality', ready: true },
   { key: 'crm', label: 'CRM والولاء', labelEn: 'CRM & loyalty', icon: 'crm', group: 'العلاقات', groupEn: 'Relationships', ready: true },
-  { key: 'accounting', label: 'المحاسبة والضريبة', labelEn: 'Accounting & tax', icon: 'accounting', group: 'المالية', groupEn: 'Finance' },
+  { key: 'accounting', label: 'المحاسبة والضريبة', labelEn: 'Accounting & tax', icon: 'accounting', group: 'المالية', groupEn: 'Finance', ready: true },
   { key: 'zatca', label: 'زاتكا والفوترة', labelEn: 'ZATCA & e-invoicing', icon: 'zatca', group: 'المالية', groupEn: 'Finance', ready: true },
-  { key: 'reports', label: 'التقارير والتحليلات', labelEn: 'Reports & analytics', icon: 'reports', group: 'الرؤية', groupEn: 'Insights' },
+  { key: 'reports', label: 'التقارير والتحليلات', labelEn: 'Reports & analytics', icon: 'reports', group: 'الرؤية', groupEn: 'Insights', ready: true },
   { key: 'hr', label: 'الموظفون والموارد البشرية', labelEn: 'People & HR', icon: 'people', group: 'الإدارة', groupEn: 'Administration', ready: true },
   { key: 'settings', label: 'إعدادات النظام', labelEn: 'System settings', icon: 'settings', group: 'الإدارة', groupEn: 'Administration', ready: true },
 ];
@@ -145,8 +148,12 @@ export default function App() {
           {page === 'hr' && <ModuleWorkspace module="hr" lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'settings' && <SettingsPage lang={lang}/>}
           {page === 'coming-soon' && <ComingSoon lang={lang} title={isAr ? comingPage?.label : comingPage?.labelEn}/>}
-          {page === 'purchasing' && <OperationsPage lang={lang} mode="purchasing" demoMode={authMode === 'demo'}/>}
-          {(page === 'accounting' || page === 'customers' || page === 'reports') && <ComingSoon lang={lang} title={nav.find((n) => n.key === page)?.[isAr ? 'label' : 'labelEn']}/>}
+          {page === 'purchasing' && <PurchasingPage lang={lang} demoMode={authMode === 'demo'}/>}
+          {page === 'accounting' && <AccountingPage lang={lang} demoMode={authMode === 'demo'}/>}
+          <Suspense fallback={page === 'reports' ? <div className="finance-loading">{t('جارٍ تحميل لوحة التحليلات…','Loading analytics dashboard…')}</div> : null}>
+            {page === 'reports' && <ReportsPage lang={lang} demoMode={authMode === 'demo'}/>}
+          </Suspense>
+          {page === 'customers' && <ComingSoon lang={lang} title={nav.find((n) => n.key === page)?.[isAr ? 'label' : 'labelEn']}/>}
         </div>
         <footer className="app-footer"><span>SHOPNEX ULTIMATE <i>·</i> v0.2.0</span><span>{t('مصمم لدعم متطلبات الفوترة الإلكترونية ذات الصلة','Designed to support applicable e-invoicing requirements')} <ShieldCheck size={13}/></span></footer>
       </main>

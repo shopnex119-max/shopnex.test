@@ -12,6 +12,16 @@ export default defineConfig(({ mode }) => {
       allowedHosts: ['.sg2.manus.computer'],
     },
     envPrefix: ['VITE_', 'TAURI_ENV_*'],
-    build: { target: ['es2022', 'chrome105', 'safari13'], minify: 'esbuild', sourcemap: false },
+    build: {
+      target: ['es2022', 'chrome105', 'safari13'], minify: 'esbuild', sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('/node_modules/recharts/') || id.includes('/node_modules/d3-')) return 'charts-vendor';
+            if (id.includes('/node_modules/react/') || id.includes('/node_modules/react-dom/') || id.includes('/node_modules/scheduler/')) return 'react-vendor';
+          },
+        },
+      },
+    },
   };
 });

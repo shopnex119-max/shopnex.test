@@ -90,6 +90,12 @@ def test_product_creation_and_invoice_vat_rounding(client: TestClient):
         assert movement.balance_after == Decimal("2.000")
         payment = db.scalar(select(InvoicePayment).where(InvoicePayment.invoice_id == invoice.json()["id"]))
         assert payment.amount == Decimal("230.00")
+    trial = client.get("/api/v1/accounting/trial-balance", headers=headers)
+    assert trial.status_code == 200 and trial.json()["balanced"] is True
+    report = client.get("/api/v1/reports/overview", headers=headers)
+    assert report.status_code == 200
+    assert Decimal(str(report.json()["sales"]["total"])) == Decimal("230.00")
+    assert report.json()["period"]["timezone"] == "Asia/Riyadh"
 
 
 def test_invoice_price_and_tax_come_from_catalog_and_inclusive_prices_round_safely(client: TestClient):
