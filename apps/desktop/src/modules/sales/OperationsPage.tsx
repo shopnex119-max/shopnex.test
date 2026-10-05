@@ -52,7 +52,14 @@ export default function OperationsPage({ lang, mode, demoMode }: { lang: AppLang
 
   const visible = useMemo(() => records.filter((record) => `${record.id} ${record.name} ${record.channel}`.toLowerCase().includes(search.toLowerCase())), [records, search]);
   const totalMinor = records.reduce((sum, record) => sum + toMinor(record.amount), 0n);
-  const averageMinor = records.length ? (totalMinor + BigInt(records.length / 2)) / BigInt(records.length) : 0n;
+  const recordCount = BigInt(records.length);
+  const averageMinor = recordCount === 0n ? 0n : (() => {
+    const quotient = totalMinor / recordCount;
+    const remainder = totalMinor % recordCount;
+    const absoluteRemainder = remainder < 0n ? -remainder : remainder;
+    if (absoluteRemainder * 2n < recordCount) return quotient;
+    return quotient + (totalMinor < 0n ? -1n : 1n);
+  })();
   const t = (a: string, e: string) => ar ? a : e;
   const stateIsPaid = (state: string) => ['مدفوعة', 'Paid'].includes(state);
   const stateIsDraft = (state: string) => ['مسودة', 'Draft'].includes(state);
