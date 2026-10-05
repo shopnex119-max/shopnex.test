@@ -155,7 +155,7 @@ export default function App() {
           </Suspense>
           {page === 'customers' && <ComingSoon lang={lang} title={nav.find((n) => n.key === page)?.[isAr ? 'label' : 'labelEn']}/>}
         </div>
-        <footer className="app-footer"><span>SHOPNEX ULTIMATE <i>·</i> v0.2.0</span><span>{t('مصمم لدعم متطلبات الفوترة الإلكترونية ذات الصلة','Designed to support applicable e-invoicing requirements')} <ShieldCheck size={13}/></span></footer>
+        <footer className="app-footer"><span>SHOPNEX ULTIMATE <i>·</i> v0.3.0</span><span>{t('مصمم لدعم متطلبات الفوترة الإلكترونية ذات الصلة','Designed to support applicable e-invoicing requirements')} <ShieldCheck size={13}/></span></footer>
       </main>
     </div>
   );
