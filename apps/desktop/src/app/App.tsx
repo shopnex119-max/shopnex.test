@@ -7,7 +7,7 @@ import {
   ShoppingCart, Sun, UtensilsCrossed, Users, WalletCards, Warehouse, X,
 } from 'lucide-react';
 import type { AppPage, AppLanguage, PageKey, ThemeMode } from './types';
-import { getAuthStatus, setAccessToken } from './api';
+import { getAuthStatus, isPublicPreview, setAccessToken } from './api';
 import AuthGate from './AuthGate';
 import SensitiveAccessGate, { type ProtectedPage } from './SensitiveAccessGate';
 import Dashboard from '../modules/dashboard/Dashboard';
@@ -73,8 +73,10 @@ export default function App() {
   }, []);
   useEffect(() => { setSensitiveUnlockFor(null); }, [page]);
   const completeSensitiveUnlock = (protectedPage: ProtectedPage, user: { display_name: string; role: string }) => {
-    setProfile(user);
-    setAuthMode('authenticated');
+    if (!isPublicPreview) {
+      setProfile(user);
+      setAuthMode('authenticated');
+    }
     setSensitiveUnlockFor(protectedPage);
   };
   const isAr = lang === 'ar';
