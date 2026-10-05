@@ -6,7 +6,12 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.db.models import Base, InventoryMovement, InvoicePayment
+from app.api.zatca import DEFAULT_COMPANY_ID
+from app.db.models import (
+    AccountingAccount, Base, Company, InventoryMovement, InvoicePayment, JournalEntry,
+    ModuleRecord, Product, Purchase, PurchasePayment, Supplier, TaxRule, User,
+    ZatcaDocument, ZatcaSettings,
+)
 from app.db.session import get_db
 from app.main import app
 
@@ -148,3 +153,93 @@ def test_zatca_config_is_local_and_external_connection_is_explicitly_disabled(cl
     blocked = client.post("/api/v1/zatca/test-connection", headers=headers)
     assert blocked.status_code == 501
     assert "No authority request was sent" in blocked.json()["detail"]
+
+
+def test_operational_reset_requires_password_and_preserves_setup_and_zatca(client: TestClient):
+    headers = {"Authorization": f"Bearer {owner_token(client)}"}
+    product_response = client.post("/api/v1/products", headers=headers, json={
+        "sku": "RESET-001", "name": "منتج تصفير", "price": "20.00", "quantity": "4.000",
+    })
+    assert product_response.status_code == 201, product_response.text
+    product = product_response.json()
+    invoice_response = client.post("/api/v1/invoices", headers=headers, json={
+        "invoice_number": "INV-RESET-001",
+        "lines": [{"product_id": product["id"], "quantity": "1", "discount_percent": "0"}],
+        "payments": [{"method": "cash", "amount": "23.00"}],
+    })
+    assert invoice_response.status_code == 201, invoice_response.text
+    invoice = invoice_response.json()
+
+    supplier_response = client.post("/api/v1/suppliers", headers=headers, json={
+        "supplier_code": "RESET-SUP-001", "name": "مورد تصفير",
+    })
+    assert supplier_response.status_code == 201, supplier_response.text
+    supplier = supplier_response.json()
+    purchase_response = client.post("/api/v1/purchases", headers=headers, json={
+        "purchase_number": "PUR-RESET-001", "supplier_id": supplier["id"],
+        "lines": [{"product_id": product["id"], "quantity": "2", "unit_cost": "5.00"}],
+        "payments": [{"method": "cash", "amount": "5.75"}],
+    })
+    assert purchase_response.status_code == 201, purchase_response.text
+
+    zatca = client.put("/api/v1/zatca/config", headers=headers, json={
+        "environment": "sandbox", "company_name": "شركة محفوظة", "vat_number": "310000000000003", "egs_unit": "EGS-RESET-001",
+    })
+    assert zatca.status_code == 200 and zatca.json()["configured"] is True
+
+    with app.state.test_session_maker() as db:
+        company = db.get(Company, DEFAULT_COMPANY_ID)
+        assert company is not None
+        zatca_document = ZatcaDocument(
+            company_id=company.id, invoice_id=invoice["id"], invoice_number=invoice["invoice_number"],
+            invoice_type="simplified", status="draft",
+        )
+        db.add(zatca_document)
+        db.add_all([
+            ModuleRecord(company_id=company.id, module="crm", data={"name": "عميل يتم مسحه"}),
+            ModuleRecord(company_id=company.id, module="restaurant", data={"type": "table", "name": "طاولة محفوظة"}),
+            ModuleRecord(company_id=company.id, module="hr", data={"name": "موظف محفوظ"}),
+        ])
+        db.commit()
+        zatca_document_id = zatca_document.id
+
+    reset_url = "/api/v1/admin/reset-operational-data"
+    assert client.post(reset_url, json={"current_password": "strong-local-password-2026"}).status_code == 401
+    wrong_password = client.post(reset_url, headers=headers, json={"current_password": "incorrect-local-password-2026"})
+    assert wrong_password.status_code == 401
+    assert len(client.get("/api/v1/invoices", headers=headers).json()) == 1
+
+    response = client.post(reset_url, headers=headers, json={"current_password": "strong-local-password-2026"})
+    assert response.status_code == 200, response.text
+    counts = response.json()["deleted_counts"]
+    assert counts["invoices"] == 1
+    assert counts["invoice_lines"] == 1
+    assert counts["invoice_payments"] == 1
+    assert counts["purchases"] == 1
+    assert counts["purchase_lines"] == 1
+    assert counts["purchase_payments"] == 1
+    assert counts["products"] == 1
+    assert counts["suppliers"] == 1
+    assert counts["customers"] == 1
+    assert client.get("/api/v1/invoices", headers=headers).json() == []
+    assert client.get("/api/v1/products", headers=headers).json() == []
+    assert client.get("/api/v1/purchases", headers=headers).json() == []
+    assert client.get("/api/v1/suppliers", headers=headers).json() == []
+    assert client.get("/api/v1/zatca/config?environment=sandbox", headers=headers).json()["configured"] is True
+
+    with app.state.test_session_maker() as db:
+        assert db.get(Company, DEFAULT_COMPANY_ID) is not None
+        assert db.scalar(select(User).where(User.username == "owner")) is not None
+        assert db.scalar(select(AccountingAccount.id).limit(1)) is not None
+        assert db.scalar(select(TaxRule.id).limit(1)) is not None
+        assert db.scalar(select(ZatcaSettings.id).limit(1)) is not None
+        preserved_document = db.get(ZatcaDocument, zatca_document_id)
+        assert preserved_document is not None and preserved_document.invoice_id is None
+        assert db.scalar(select(ModuleRecord.id).where(ModuleRecord.module == "crm").limit(1)) is None
+        retained_modules = db.scalars(select(ModuleRecord).where(ModuleRecord.module.in_(["restaurant", "hr"]))).all()
+        assert len(retained_modules) == 2
+        assert db.scalar(select(JournalEntry.id).limit(1)) is None
+        assert db.scalar(select(Purchase.id).limit(1)) is None
+        assert db.scalar(select(PurchasePayment.id).limit(1)) is None
+        assert db.scalar(select(Product.id).limit(1)) is None
+        assert db.scalar(select(Supplier.id).limit(1)) is None

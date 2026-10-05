@@ -58,6 +58,18 @@ export async function getHealth() {
   return apiRequest<{ status: string; database: string; integration_mode: string }>('/api/health');
 }
 
+export interface OperationalResetResult {
+  message: string;
+  deleted_counts: Record<string, number>;
+  preserved_records_present?: Record<string, number>;
+}
+
+export async function resetOperationalData(currentPassword: string) {
+  return apiRequest<OperationalResetResult>('/api/v1/admin/reset-operational-data', {
+    method: 'POST', body: JSON.stringify({ current_password: currentPassword }),
+  });
+}
+
 export interface CatalogProduct {
   id: string;
   sku: string;

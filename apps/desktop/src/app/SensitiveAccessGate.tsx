@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowUpLeft, KeyRound, LockKeyhole, ShieldCheck } from '
 import { isPublicPreview, login, setAccessToken } from './api';
 import type { AppLanguage, PageKey } from './types';
 
-export type ProtectedPage = Extract<PageKey, 'sales' | 'invoices' | 'zatca'>;
+export type ProtectedPage = Extract<PageKey, 'zatca'>;
 const DEMO_PASSWORD_SHA256 = '895b13f1e984a5e710e65ce371fb5ed653359612a16bdf0d14425a4983581cce';
 
 export default function SensitiveAccessGate({
@@ -22,9 +22,7 @@ export default function SensitiveAccessGate({
   const t = (a: string, e: string) => ar ? a : e;
   const moduleName = page === 'zatca'
     ? t('زاتكا والفوترة الإلكترونية', 'ZATCA & e-invoicing')
-    : page === 'sales'
-      ? t('الكاشير والفواتير', 'Cashier & invoicing')
-      : t('سجل الفواتير', 'Invoice register');
+    : t('وحدة محمية', 'Protected module');
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -59,8 +57,8 @@ export default function SensitiveAccessGate({
       <span className="eyebrow">{t('وحدة محمية بكلمة المرور', 'PASSWORD-PROTECTED MODULE')}</span>
       <h1>{moduleName}<span className="heading-period">.</span></h1>
       <p>{isPublicPreview
-        ? t('أدخل كلمة مرور المعاينة لفتح الشاشة. هذا قفل تجريبي للواجهة فقط؛ يمكن تجاوزه ولا يحمي بيانات حقيقية.', 'Enter the preview password to open this screen. This is only a demo UI gate; it can be bypassed and does not protect real data.')
-        : t('أعد إدخال بيانات حساب SHOPNEX المحلي للتحقق من هويتك قبل فتح هذه الشاشة. لا تُحفظ كلمة المرور بعد التحقق.', 'Re-enter your local SHOPNEX account credentials to verify your identity before opening this screen. The password is not stored after verification.')}</p>
+        ? t('أدخل كلمة مرور المعاينة لفتح شاشة زاتكا. هذا قفل تجريبي للواجهة فقط؛ يمكن تجاوزه ولا يحمي بيانات حقيقية.', 'Enter the preview password to open ZATCA. This is only a demo UI gate; it can be bypassed and does not protect real data.')
+        : t('أعد إدخال بيانات حساب SHOPNEX المحلي للتحقق من هويتك قبل فتح زاتكا. لا تُحفظ كلمة المرور بعد التحقق.', 'Re-enter your local SHOPNEX account credentials to verify your identity before opening ZATCA. The password is not stored after verification.')}</p>
       {isPublicPreview && <div className="sensitive-access-warning"><ShieldCheck size={17}/><span>{t('الموقع العام لا يملك خادم تحقق؛ بيانات الشاشة أمثلة تجريبية فقط. لا تستخدم هذا القفل لحماية سجلات منشأتك.', 'The public site has no authentication server; this screen contains demo examples only. Do not rely on this gate to protect business records.')}</span></div>}
       <form className="sensitive-access-form" onSubmit={submit}>
         {!isPublicPreview && <label className="form-field"><span>{t('اسم المستخدم', 'Username')}</span><input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" minLength={3} maxLength={120} required/></label>}
