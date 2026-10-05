@@ -1,11 +1,11 @@
-const publicPreview = import.meta.env.VITE_PUBLIC_PREVIEW === 'true';
+export const isPublicPreview = import.meta.env.VITE_PUBLIC_PREVIEW === 'true';
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000';
 let accessToken: string | null = null;
 
 export function setAccessToken(token: string | null) { accessToken = token; }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  if (publicPreview) throw new Error('Public demo only: no API request was sent. العرض العام للقراءة فقط ولا يرسل طلبات API.');
+  if (isPublicPreview) throw new Error('Public demo only: no API request was sent. العرض العام للقراءة فقط ولا يرسل طلبات API.');
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {

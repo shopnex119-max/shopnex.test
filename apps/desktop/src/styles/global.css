@@ -333,3 +333,23 @@
 @media(max-width:950px){.zatca-documents-grid{grid-template-columns:1fr}.qr-preview-panel{max-width:none}}
 
 .finance-loading{display:grid;min-height:240px;place-items:center;color:var(--muted);font-size:10px}
+
+
+/* Re-authentication gate for invoice and ZATCA modules */
+.sensitive-access-page{min-height:min(68vh,760px);display:grid;place-items:center;padding:22px}
+.sensitive-access-card{width:min(540px,100%);padding:clamp(22px,4vw,34px);display:flex;flex-direction:column;align-items:flex-start;gap:12px;border-color:rgba(241,187,104,.2);background:var(--panel,rgba(12,20,33,.82))}
+.sensitive-access-icon{width:48px;height:48px;border:1px solid rgba(241,187,104,.24);border-radius:15px;display:grid;place-items:center;background:rgba(241,187,104,.08);color:var(--amber,#efc274)}
+.sensitive-access-card h1{margin:0;font-size:clamp(21px,3vw,30px);color:var(--text,#f4f6fb)}
+.sensitive-access-card>p{margin:0;color:var(--muted,#9aa7ba);font-size:12px;line-height:1.9}
+.sensitive-access-warning{width:100%;display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid rgba(241,187,104,.18);border-radius:11px;background:rgba(241,187,104,.045);color:var(--muted,#b9c2d0);font-size:11px;line-height:1.8}
+.sensitive-access-warning svg{flex:0 0 auto;margin-top:2px;color:var(--amber,#efc274)}
+.sensitive-access-form{width:100%;display:grid;gap:13px;margin-top:5px}
+.sensitive-access-form .form-field{display:grid;gap:7px}
+.sensitive-access-form .form-field>span{color:var(--muted,#b9c2d0);font-size:11px}
+.sensitive-access-form .form-field>input,.sensitive-password-input{width:100%;min-height:42px;padding:0 12px;border:1px solid var(--border,rgba(140,158,185,.18));border-radius:10px;background:var(--panel-strong,rgba(255,255,255,.04));color:var(--text,#f4f6fb);outline:none}
+.sensitive-access-form .form-field>input:focus,.sensitive-password-input:focus-within{border-color:rgba(71,221,200,.55);box-shadow:0 0 0 3px rgba(71,221,200,.08)}
+.sensitive-password-input{display:flex;align-items:center;gap:9px;color:var(--muted,#9aa7ba)}
+.sensitive-password-input input{width:100%;height:40px;border:0;outline:0;background:transparent;color:var(--text,#f4f6fb)}
+.sensitive-access-form .button{justify-content:center;min-height:42px}
+.sensitive-access-actions{width:100%;display:flex;justify-content:flex-end;margin-top:3px}
+@media(max-width:600px){.sensitive-access-page{min-height:60vh;padding:12px}.sensitive-access-card{padding:20px}.sensitive-access-form .button{width:100%}}
