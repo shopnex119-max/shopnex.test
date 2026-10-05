@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 
 app = FastAPI(
-    title="SHOPNEX Local API", version="0.2.0",
+    title="SHOPNEX Local API", version="0.3.0",
     description="Local-first business API. ZATCA authority submission is intentionally disabled until official specifications and taxpayer onboarding are verified.",
     docs_url="/docs", redoc_url="/redoc",
 )
