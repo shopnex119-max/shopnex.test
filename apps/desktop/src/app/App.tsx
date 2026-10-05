@@ -9,6 +9,7 @@ import {
 import type { AppPage, AppLanguage, PageKey, ThemeMode } from './types';
 import { getAuthStatus, setAccessToken } from './api';
 import AuthGate from './AuthGate';
+import SensitiveAccessGate, { type ProtectedPage } from './SensitiveAccessGate';
 import Dashboard from '../modules/dashboard/Dashboard';
 import ZatcaPage from '../modules/zatca/ZatcaPage';
 import OperationsPage from '../modules/sales/OperationsPage';
@@ -61,6 +62,7 @@ export default function App() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [sensitiveUnlockFor, setSensitiveUnlockFor] = useState<ProtectedPage | null>(null);
   useEffect(() => {
     const isDesktop = Boolean((window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
     if (!isDesktop) { setAuthMode('demo'); return; }
@@ -69,6 +71,12 @@ export default function App() {
       .catch(() => { if (active) setAuthMode('login'); });
     return () => { active = false; };
   }, []);
+  useEffect(() => { setSensitiveUnlockFor(null); }, [page]);
+  const completeSensitiveUnlock = (protectedPage: ProtectedPage, user: { display_name: string; role: string }) => {
+    setProfile(user);
+    setAuthMode('authenticated');
+    setSensitiveUnlockFor(protectedPage);
+  };
   const isAr = lang === 'ar';
   const t = (ar: string, en: string) => isAr ? ar : en;
   const activePage = useMemo(() => page === 'coming-soon' && comingPage ? comingPage : nav.find((item) => item.key === page && item.ready) ?? nav[0], [page, comingPage]);
@@ -80,6 +88,7 @@ export default function App() {
   }, [query, isAr]);
 
   const choosePage = (item: AppPage) => {
+    setSensitiveUnlockFor(null);
     if (item.ready) setPage(item.key);
     else { setComingPage(item); setPage('coming-soon'); }
     setMobileOpen(false);
@@ -136,9 +145,9 @@ export default function App() {
         </header>
         <div className="page-content" key={`${page}-${lang}`}>
           {page === 'overview' && <Dashboard lang={lang} onNavigate={setPage}/>}
-          {page === 'zatca' && <ZatcaPage lang={lang} demoMode={authMode === 'demo'}/>}
-          {page === 'sales' && <PosPage lang={lang} demoMode={authMode === 'demo'}/>}
-          {page === 'invoices' && <OperationsPage lang={lang} mode="invoices" demoMode={authMode === 'demo'}/>}
+          {page === 'zatca' && (sensitiveUnlockFor === 'zatca' ? <ZatcaPage lang={lang} demoMode={authMode === 'demo'}/> : <SensitiveAccessGate page="zatca" lang={lang} onUnlock={(user) => completeSensitiveUnlock('zatca', user)} onCancel={() => setPage('overview')}/>)}
+          {page === 'sales' && (sensitiveUnlockFor === 'sales' ? <PosPage lang={lang} demoMode={authMode === 'demo'}/> : <SensitiveAccessGate page="sales" lang={lang} onUnlock={(user) => completeSensitiveUnlock('sales', user)} onCancel={() => setPage('overview')}/>)}
+          {page === 'invoices' && (sensitiveUnlockFor === 'invoices' ? <OperationsPage lang={lang} mode="invoices" demoMode={authMode === 'demo'}/> : <SensitiveAccessGate page="invoices" lang={lang} onUnlock={(user) => completeSensitiveUnlock('invoices', user)} onCancel={() => setPage('overview')}/>)}
           {page === 'inventory' && <InventoryPage lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'products' && <InventoryPage lang={lang} productsOnly demoMode={authMode === 'demo'}/>}
           {page === 'restaurant' && <ModuleWorkspace module="restaurant" lang={lang} demoMode={authMode === 'demo'}/>}

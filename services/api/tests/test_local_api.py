@@ -59,6 +59,12 @@ def test_setup_is_single_use_and_business_data_requires_session(client: TestClie
     assert client.get("/api/v1/products").status_code == 401
 
 
+def test_invoice_and_zatca_sensitive_routes_require_authenticated_session(client: TestClient):
+    assert client.get("/api/v1/invoices").status_code == 401
+    assert client.get("/api/v1/zatca/config").status_code == 401
+    assert client.get("/api/v1/zatca/invoices/not-a-real-id/qr/phase1").status_code == 401
+
+
 def test_product_creation_and_invoice_vat_rounding(client: TestClient):
     token = owner_token(client)
     headers = {"Authorization": f"Bearer {token}"}
