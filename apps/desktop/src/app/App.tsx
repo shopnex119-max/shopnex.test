@@ -157,7 +157,7 @@ export default function App() {
           {page === 'guest' && <GuestPage lang={lang}/>}
           {page === 'crm' && <ModuleWorkspace module="crm" lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'hr' && <ModuleWorkspace module="hr" lang={lang} demoMode={authMode === 'demo'}/>}
-          {page === 'settings' && <SettingsPage lang={lang}/>}
+          {page === 'settings' && <SettingsPage lang={lang} onNavigateToZatca={() => { setSensitiveUnlockFor(null); setPage('zatca'); }} />}
           {page === 'coming-soon' && <ComingSoon lang={lang} title={isAr ? comingPage?.label : comingPage?.labelEn}/>}
           {page === 'purchasing' && <PurchasingPage lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'accounting' && <AccountingPage lang={lang} demoMode={authMode === 'demo'}/>}
@@ -166,7 +166,7 @@ export default function App() {
           </Suspense>
           {page === 'customers' && <ComingSoon lang={lang} title={nav.find((n) => n.key === page)?.[isAr ? 'label' : 'labelEn']}/>}
         </div>
-        <footer className="app-footer"><span>SHOPNEX ULTIMATE <i>·</i> v0.3.0</span><span>{t('مصمم لدعم متطلبات الفوترة الإلكترونية ذات الصلة','Designed to support applicable e-invoicing requirements')} <ShieldCheck size={13}/></span></footer>
+        <footer className="app-footer"><span>SHOPNEX ULTIMATE <i>·</i> v0.4.0</span><span>{t('مصمم لدعم متطلبات الفوترة الإلكترونية ذات الصلة','Designed to support applicable e-invoicing requirements')} <ShieldCheck size={13}/></span></footer>
       </main>
     </div>
   );

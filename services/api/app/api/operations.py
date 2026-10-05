@@ -9,7 +9,7 @@ from app.core.auth import require_user
 from app.db.models import InventoryMovement, Invoice, InvoiceLine, InvoicePayment, Product, User
 from app.db.session import get_db
 from app.financial import ZERO, calculate_line, money
-from app.schemas import InvoiceInput, InvoiceOutput, ProductInput, ProductOutput
+from app.schemas import InvoiceDetailOutput, InvoiceInput, InvoiceOutput, ProductInput, ProductOutput
 from app.tax import resolve_tax_rule
 
 router = APIRouter(tags=["Products & Sales"], dependencies=[Depends(require_user)])
@@ -63,6 +63,22 @@ def list_invoices(db: Session = Depends(get_db), _user: User = Depends(require_u
         .order_by(Invoice.created_at.desc())
         .limit(200)
     ).all()
+
+
+@router.get("/invoices/{invoice_id}", response_model=InvoiceDetailOutput)
+def get_invoice(invoice_id: str, db: Session = Depends(get_db), _user: User = Depends(require_user)):
+    company = _company(db)
+    invoice = db.scalar(select(Invoice).where(Invoice.id == invoice_id, Invoice.company_id == company.id))
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    lines = db.scalars(
+        select(InvoiceLine).where(InvoiceLine.invoice_id == invoice.id).order_by(InvoiceLine.id)
+    ).all()
+    payments = db.scalars(
+        select(InvoicePayment).where(InvoicePayment.invoice_id == invoice.id)
+        .order_by(InvoicePayment.created_at, InvoicePayment.id)
+    ).all()
+    return {**InvoiceOutput.model_validate(invoice).model_dump(), "lines": lines, "payments": payments}
 
 
 @router.post("/invoices", response_model=InvoiceOutput, status_code=201)

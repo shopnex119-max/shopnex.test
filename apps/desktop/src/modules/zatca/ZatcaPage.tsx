@@ -84,6 +84,7 @@ export default function ZatcaPage({ lang, demoMode }: { lang: AppLanguage; demoM
         <article className="panel quick-stats-panel"><div className="panel-heading"><div><span className="eyebrow">{t('حالة المستندات','DOCUMENT STATUS')}</span><h2>{t('ملخص الإرسال','Submission summary')}</h2></div><FileCheck2 size={17}/></div><div className="status-stat-list"><StatusStat label={t('بانتظار التحقق','Awaiting validation')} count="—" kind="amber"/><StatusStat label={t('مقبولة / مسجلة','Accepted / reported')} count="—" kind="green"/><StatusStat label={t('مرفوضة / بها خطأ','Rejected / with errors')} count="—" kind="red"/></div><p className="stat-footnote">{t('لا توجد وثائق حقيقية مرسلة من هذا الإصدار.','No real documents have been submitted by this build.')}</p></article>
       </aside>
     </div>}
+    {tab === 'documents' && <div className="finance-alert warning"><AlertTriangle size={16}/><span>{t('رفع الفاتورة إلى الهيئة غير متاح في هذا الإصدار. يلزم محول Phase 2 والتحقق بحساب المكلف في Sandbox قبل التفعيل.','Invoice submission to the authority is not available in this build. Phase 2 adapter and taxpayer-account Sandbox validation are required before enabling it.')}</span><button className="button button-outline compact" disabled title={t('يتطلب تهيئة زاتكا الرسمية','Requires official ZATCA onboarding')}><Upload size={13}/>{t('رفع إلى زاتكا (غير مفعّل)','Submit to ZATCA (disabled)')}</button></div>}
     {tab === 'documents' && <DocumentsTab lang={lang} demoMode={demoMode}/>}
     {tab === 'logs' && <LogsTab lang={lang}/>}
   </section>;

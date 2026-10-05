@@ -37,6 +37,7 @@ def invoice_phase1_qr(invoice_id: str, db: Session = Depends(get_db), _user: Use
     )
     return {
         "invoice_id": invoice.id, "invoice_number": invoice.invoice_number,
+        "seller_name": seller_name, "vat_number": vat_number,
         "format": "TLV_Base64_5_tag_local_preview", "qr_base64": encoded,
         "tags": tags, "phase2_ready": False, "authority_contacted": False,
         "disclaimer": "Local Phase 1-format preview only. Not a ZATCA Phase 2 signed/cleared invoice, not submitted, and not a statement of compliance.",

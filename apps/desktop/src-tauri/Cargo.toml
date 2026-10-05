@@ -1,6 +1,6 @@
 [package]
 name = "shopnex-desktop"
-version = "0.3.0"
+version = "0.4.0"
 description = "SHOPNEX ULTIMATE desktop application"
 authors = ["SHOPNEX"]
 edition = "2021"

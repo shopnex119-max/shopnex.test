@@ -141,6 +141,37 @@ def test_purchase_overpayment_rolls_back_receipt_and_journal(client: TestClient)
     assert client.get("/api/v1/accounting/journals", headers=headers).json() == []
 
 
+def test_invoice_detail_returns_persisted_lines_and_payments(client: TestClient):
+    headers = auth(client)
+    product = client.post("/api/v1/products", headers=headers, json={
+        "sku": "PRINT-001", "name": "صنف للطباعة", "price": "12.34", "quantity": "3.000",
+    }).json()
+    created = client.post("/api/v1/invoices", headers=headers, json={
+        "invoice_number": "INV-PRINT-001",
+        "customer_name": "عميل اختبار",
+        "lines": [{"product_id": product["id"], "quantity": "2.000", "discount_percent": "5.00"}],
+        "payments": [{"method": "cash", "amount": "26.99"}],
+    })
+    assert created.status_code == 201, created.text
+
+    detail = client.get(f"/api/v1/invoices/{created.json()['id']}", headers=headers)
+    assert detail.status_code == 200, detail.text
+    payload = detail.json()
+    assert payload["invoice_number"] == "INV-PRINT-001"
+    assert payload["customer_name"] == "عميل اختبار"
+    assert len(payload["lines"]) == 1
+    assert payload["lines"][0]["sku"] == "PRINT-001"
+    assert Decimal(str(payload["lines"][0]["quantity"])) == Decimal("2.000")
+    assert Decimal(str(payload["lines"][0]["discount_amount"])) == Decimal("1.23")
+    assert Decimal(str(payload["lines"][0]["vat_amount"])) == Decimal("3.52")
+    assert len(payload["payments"]) == 1
+    assert Decimal(str(payload["payments"][0]["amount"])) == Decimal("26.97")
+    assert Decimal(str(payload["change_due"])) == Decimal("0.02")
+
+    missing = client.get("/api/v1/invoices/not-a-real-invoice", headers=headers)
+    assert missing.status_code == 404
+
+
 def test_zatca_phase1_qr_tlv_preview_uses_five_official_fields_without_phase2_claim(client: TestClient):
     headers = auth(client)
     config = client.put("/api/v1/zatca/config", headers=headers, json={
@@ -159,6 +190,8 @@ def test_zatca_phase1_qr_tlv_preview_uses_five_official_fields_without_phase2_cl
     payload = response.json()
     assert payload["phase2_ready"] is False
     assert payload["authority_contacted"] is False
+    assert payload["seller_name"] == "شركة تجربة"
+    assert payload["vat_number"] == "310000000000003"
     assert [item["tag"] for item in payload["tags"]] == [1, 2, 3, 4, 5]
     decoded = base64.b64decode(payload["qr_base64"])
     fields = {}
