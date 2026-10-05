@@ -65,7 +65,11 @@ export interface CatalogProduct {
   category: string;
   price: string;
   vat_rate: string;
+  tax_category: 'standard' | 'zero_rated' | 'exempt' | 'out_of_scope';
+  tax_reason: string;
+  tax_rule_id: string | null;
   quantity: string;
+  average_cost: string;
   price_includes_vat: boolean;
   active: boolean;
 }
@@ -74,7 +78,11 @@ export async function getProducts() {
   return apiRequest<CatalogProduct[]>('/api/v1/products');
 }
 
-export type CreateProductInput = Omit<CatalogProduct, 'id' | 'active'>;
+export type CreateProductInput = {
+  sku: string; name: string; category: string; price: string; vat_rate: string;
+  tax_category?: CatalogProduct['tax_category']; tax_reason?: string;
+  quantity: string; average_cost?: string; price_includes_vat: boolean;
+};
 
 export async function createProduct(input: CreateProductInput) {
   return apiRequest<CatalogProduct>('/api/v1/products', { method: 'POST', body: JSON.stringify(input) });
@@ -85,7 +93,7 @@ export interface CreateInvoiceInput {
   customer_name: string;
   invoice_type: 'simplified';
   lines: { product_id: string; quantity: string; discount_percent: string }[];
-  payments: { method: 'cash' | 'card'; amount: string }[];
+  payments: { method: 'cash' | 'card' | 'bank_transfer' | 'wallet' | 'other'; amount: string }[];
 }
 
 export interface SavedInvoice {
@@ -109,6 +117,78 @@ export async function createInvoice(input: CreateInvoiceInput) {
 
 export async function getInvoices() {
   return apiRequest<SavedInvoice[]>('/api/v1/invoices');
+}
+
+export interface Supplier {
+  id: string; supplier_code: string; name: string; vat_number: string; phone: string;
+  email: string; payment_terms_days: number; credit_limit: string; active: boolean;
+}
+export interface SupplierInput extends Omit<Supplier, 'id' | 'active'> {}
+export async function getSuppliers() { return apiRequest<Supplier[]>('/api/v1/suppliers'); }
+export async function createSupplier(input: SupplierInput) {
+  return apiRequest<Supplier>('/api/v1/suppliers', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export interface PurchaseRecord {
+  id: string; purchase_number: string; supplier_invoice_number: string; supplier_id: string;
+  supplier_name: string; status: 'unpaid' | 'partially_paid' | 'paid'; subtotal: string | number;
+  discount_total: string | number; taxable_subtotal: string | number; vat_total: string | number;
+  total: string | number; amount_paid: string | number; balance_due: string | number;
+  due_date: string | null; created_at: string; currency: string;
+  lines: { product_id: string; sku: string; description: string; quantity: string | number; unit_cost: string | number;
+    discount_percent: string | number; taxable_amount: string | number; vat_rate: string | number;
+    vat_amount: string | number; total_amount: string | number }[];
+  payments: { id: string; method: string; amount: string | number; created_at: string }[];
+}
+export interface CreatePurchaseInput {
+  purchase_number: string; supplier_invoice_number?: string; supplier_id: string; due_date?: string;
+  lines: { product_id: string; quantity: string; unit_cost: string; discount_percent: string; price_includes_vat: boolean }[];
+  payments: { method: 'cash' | 'card' | 'bank_transfer' | 'wallet' | 'other'; amount: string }[];
+}
+export async function getPurchases() { return apiRequest<PurchaseRecord[]>('/api/v1/purchases'); }
+export async function createPurchase(input: CreatePurchaseInput) {
+  return apiRequest<PurchaseRecord>('/api/v1/purchases', { method: 'POST', body: JSON.stringify(input) });
+}
+export async function addPurchasePayment(purchaseId: string, input: { method: string; amount: string; idempotency_key: string }) {
+  return apiRequest<PurchaseRecord>(`/api/v1/purchases/${encodeURIComponent(purchaseId)}/payments`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+export interface FinanceReport {
+  period: { start_date: string | null; end_date: string | null; timezone: string };
+  currency: string;
+  sales: { count: number; total: string | number; net: string | number; vat: string | number; paid: string | number; receivables: string | number };
+  purchases: { count: number; total: string | number; net: string | number; vat: string | number; paid: string | number; payables: string | number };
+  tax: { output_vat: string | number; input_vat: string | number; net_vat_due_estimate: string | number; filing_status: string };
+  profitability: { net_sales_before_vat: string | number; cost_of_goods_sold: string | number; gross_profit_estimate: string | number; inventory_value_at_average_cost: string | number; items_with_missing_cost: number };
+  payments_by_method: { method: string; amount: string | number }[];
+  sales_trend: { date: string; sales: string | number }[];
+  top_products: { sku: string; name: string; quantity: string | number; net_sales: string | number; vat: string | number; cost: string | number; gross_profit: string | number }[];
+  supplier_performance: { supplier: string; count: number; purchases: string | number; paid: string | number; balance: string | number }[];
+  data_scope: string;
+}
+export interface TrialBalanceRow {
+  id: string; code: string; system_key: string; name_ar: string; name_en: string;
+  account_type: string; normal_side: string; debit_total: string | number;
+  credit_total: string | number; balance: string | number;
+}
+export async function getTrialBalance() {
+  return apiRequest<{ accounts: TrialBalanceRow[]; debit_total: string | number; credit_total: string | number; balanced: boolean; currency: string }>('/api/v1/accounting/trial-balance');
+}
+export async function getJournals() { return apiRequest<any[]>('/api/v1/accounting/journals'); }
+export async function getReceivables() { return apiRequest<any[]>('/api/v1/accounting/receivables'); }
+export async function getPayables() { return apiRequest<any[]>('/api/v1/accounting/payables'); }
+export async function getTaxRules() { return apiRequest<any[]>('/api/v1/tax/rules'); }
+export async function createTaxRule(input: { code: string; name_ar: string; name_en: string; category: string; rate: string; effective_from: string; effective_to?: string; reason_required: boolean }) {
+  return apiRequest<any>('/api/v1/tax/rules', { method: 'POST', body: JSON.stringify(input) });
+}
+export async function getFinanceReport(startDate?: string, endDate?: string) {
+  const query = new URLSearchParams();
+  if (startDate) query.set('start_date', startDate);
+  if (endDate) query.set('end_date', endDate);
+  return apiRequest<FinanceReport>(`/api/v1/reports/overview${query.size ? `?${query.toString()}` : ''}`);
+}
+export async function getPhase1InvoiceQr(invoiceId: string) {
+  return apiRequest<{ invoice_id: string; invoice_number: string; format: string; qr_base64: string; tags: { tag: number; length: number; value: string }[]; phase2_ready: boolean; authority_contacted: boolean; disclaimer: string }>(`/api/v1/zatca/invoices/${encodeURIComponent(invoiceId)}/qr/phase1`);
 }
 
 export type ModuleName = 'restaurant' | 'crm' | 'hr';

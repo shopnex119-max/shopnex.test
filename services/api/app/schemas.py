@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ZatcaConfigInput(BaseModel):
@@ -42,14 +43,26 @@ class ProductInput(BaseModel):
     category: str = Field(default="عام", max_length=120)
     price: Decimal = Field(ge=0, max_digits=14, decimal_places=2)
     vat_rate: Decimal = Field(default=Decimal("15.00"), ge=0, le=100, max_digits=5, decimal_places=2)
+    tax_category: str = Field(default="standard", pattern="^(standard|zero_rated|exempt|out_of_scope)$")
+    tax_reason: str = Field(default="", max_length=240)
     quantity: Decimal = Field(default=Decimal("0"), ge=0, max_digits=14, decimal_places=3)
+    average_cost: Decimal = Field(default=Decimal("0"), ge=0, max_digits=14, decimal_places=2)
     price_includes_vat: bool = False
+
+    @model_validator(mode="after")
+    def check_tax_classification(self):
+        if self.tax_category != "standard" and self.vat_rate != 0:
+            raise ValueError("non-standard tax categories must use a zero VAT rate")
+        if self.tax_category in {"exempt", "out_of_scope"} and not self.tax_reason.strip():
+            raise ValueError("a tax reason is required for exempt or out-of-scope products")
+        return self
 
 
 class ProductOutput(ProductInput):
     model_config = ConfigDict(from_attributes=True)
     id: str
     active: bool
+    tax_rule_id: str | None = None
 
 
 class InvoiceLineInput(BaseModel):
@@ -87,3 +100,66 @@ class InvoiceOutput(BaseModel):
     change_due: Decimal
     currency: str
     created_at: datetime
+
+
+class SupplierInput(BaseModel):
+    supplier_code: str = Field(min_length=1, max_length=80)
+    name: str = Field(min_length=1, max_length=240)
+    vat_number: str = Field(default="", max_length=20)
+    phone: str = Field(default="", max_length=40)
+    email: str = Field(default="", max_length=240)
+    payment_terms_days: int = Field(default=30, ge=0, le=3650)
+    credit_limit: Decimal = Field(default=Decimal("0"), ge=0, max_digits=14, decimal_places=2)
+
+
+class SupplierOutput(SupplierInput):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    active: bool
+
+
+class PurchaseLineInput(BaseModel):
+    product_id: str = Field(min_length=1, max_length=36)
+    quantity: Decimal = Field(gt=0, max_digits=14, decimal_places=3)
+    unit_cost: Decimal = Field(ge=0, max_digits=14, decimal_places=2)
+    discount_percent: Decimal = Field(default=Decimal("0"), ge=0, le=100, max_digits=5, decimal_places=2)
+    price_includes_vat: bool = False
+
+
+class PurchasePaymentInput(BaseModel):
+    method: str = Field(pattern="^(cash|card|bank_transfer|wallet|other)$")
+    amount: Decimal = Field(gt=0, max_digits=14, decimal_places=2)
+
+
+class PurchaseInput(BaseModel):
+    purchase_number: str = Field(min_length=1, max_length=80)
+    supplier_invoice_number: str = Field(default="", max_length=80)
+    supplier_id: str = Field(min_length=1, max_length=36)
+    due_date: date | None = None
+    lines: list[PurchaseLineInput] = Field(min_length=1, max_length=500)
+    payments: list[PurchasePaymentInput] = Field(default_factory=list, max_length=20)
+
+
+class PurchasePaymentAddInput(BaseModel):
+    method: str = Field(pattern="^(cash|card|bank_transfer|wallet|other)$")
+    amount: Decimal = Field(gt=0, max_digits=14, decimal_places=2)
+    idempotency_key: str = Field(min_length=8, max_length=120)
+
+
+class TaxRuleInput(BaseModel):
+    code: str = Field(min_length=1, max_length=40)
+    name_ar: str = Field(min_length=1, max_length=160)
+    name_en: str = Field(min_length=1, max_length=160)
+    category: str = Field(pattern="^(standard|zero_rated|exempt|out_of_scope)$")
+    rate: Decimal = Field(ge=0, le=100, max_digits=5, decimal_places=2)
+    effective_from: date
+    effective_to: date | None = None
+    reason_required: bool = False
+
+    @model_validator(mode="after")
+    def check_dates_and_rate(self):
+        if self.effective_to and self.effective_to < self.effective_from:
+            raise ValueError("effective_to must not be before effective_from")
+        if self.category != "standard" and self.rate != 0:
+            raise ValueError("non-standard tax categories must have a zero VAT rate")
+        return self

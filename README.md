@@ -78,8 +78,15 @@ docker compose --env-file .env -f infra/docker-compose.yml up -d postgres
 - `POST /api/v1/zatca/validate` — تحقق محلي للحقول فقط، ولا يرسل طلبًا للجهة.
 - `POST /api/v1/zatca/test-connection` — متوقف عمدًا حتى تجهيز محول مطابق للوثائق الرسمية.
 - `GET/POST /api/v1/products` — كتالوج محلي للسعر ومعدل الضريبة وكمية الرصيد، مع خيار تسجيل السعر شاملًا للضريبة.
-- `GET/POST /api/v1/invoices` — إنشاء الفواتير بمعرّفات أصناف الكتالوج؛ يعيد الخادم حساب البنود والخصم والضريبة، ويحفظ تفاصيل البنود والمدفوعات وحركات المخزون داخل معاملة واحدة. هذه التحسينات على فرع مراجعة ولم تندمج إلى `main`؛ تبقى التغطية المحاسبية الشاملة ضمن خارطة الطريق.
+- `GET/POST /api/v1/invoices` — إعادة الحساب في الخادم وحفظ بنود الفاتورة والمدفوعات وحركة المخزون وقيود اليومية الذرية.
+- `GET/POST /api/v1/suppliers` و`GET/POST /api/v1/purchases` — الموردون وفواتير المورد والاستلام الكامل وتحديث متوسط التكلفة والدفعات. `POST /api/v1/purchases/{id}/payments` يضيف دفعة بآلية idempotency.
+- `GET /api/v1/accounting/accounts|trial-balance|journals|ledger/{system_key}|receivables|payables` — دليل الحسابات والقيود والأستاذ والذمم.
+- `GET/POST /api/v1/tax/rules` — إصدارات قواعد VAT المؤرخة والتحقق من التداخل.
+- `GET /api/v1/reports/overview` و`GET /api/v1/reports/overview.csv` — مؤشرات الفترة وتحليل المنتجات/الموردين بصيغة CSV؛ التقرير تقديري وليس إقرارًا.
+- `GET /api/v1/zatca/invoices/{id}/qr/phase1` — معاينة محلية لوسوم QR الأساسية 1–5 فقط؛ ليس تكامل Phase 2 ولا إرسالًا إلى الجهة.
 - `GET/POST /api/v1/modules/{restaurant|crm|hr}/records` و`PUT/DELETE /api/v1/modules/{restaurant|crm|hr}/records/{id}` — سجلات محلية محمية للمطاعم/الطاولات، والعملاء/نقاط الولاء، ودليل الموظفين.
+
+مسارات API الجديدة تعمل في النسخة المحلية المرتبطة بقاعدة البيانات بعد تطبيق ترحيل Alembic. موقع Pages هو واجهة معاينة ثابتة فقط؛ لا يربط API إنتاجية أو يحفظ بيانات الزوار.
 
 ## الوحدات المفعّلة في الإصدار 0.2.0
 
@@ -91,9 +98,11 @@ docker compose --env-file .env -f infra/docker-compose.yml up -d postgres
 
 توجد خطوات استبدال وحفظ البيانات في [`UPDATE-AR.md`](UPDATE-AR.md).
 
-## دفعة التطوير على فرع المراجعة
+## التطوير المالي وZATCA
 
-رُفعت شاشة كاشير محسنة، شاشة مطبخ، شاشة قائمة/طلب للضيف، ومحرك مالي أدق على الفرع `feature/pos-kds-guest-financial-core` في [طلب المراجعة المسودة #1](https://github.com/shopnex119-max/shopnex.test/pull/1). التفاصيل والحدود واختبارات الدفعة في [`docs/STATUS.md`](docs/STATUS.md) وخارطة التنفيذ في [`docs/IMPLEMENTATION-ROADMAP.md`](docs/IMPLEMENTATION-ROADMAP.md). معاينة الضيف لا ترسل طلبات حقيقية، ولا تمثل النسخة نظام ERP مكتملًا أو تكاملًا فعليًا مع ZATCA.
+التفاصيل الحالية، نتائج الاختبارات وحدود الاستخدام موثقة في [`docs/STATUS.md`](docs/STATUS.md)، وخطة التسليم في [`docs/IMPLEMENTATION-ROADMAP.md`](docs/IMPLEMENTATION-ROADMAP.md). واجهة المشتريات والمحاسبة والتحليلات على الموقع العام تستخدم أمثلة توضيحية غير دائمة؛ لا تستخدمها لتسجيل عمليات منشأة فعلية.
+
+QR الحالي ترميز محلي للخمس وسوم الأساسية وفق صيغة TLV/Base64، وليس ختم Phase 2 أو فاتورة مُبلّغًا عنها/مخلّصة. أُسندت الفروق والمراجع الرسمية إلى [`docs/ZATCA-QR-IMPLEMENTATION-NOTES.md`](docs/ZATCA-QR-IMPLEMENTATION-NOTES.md).
 
 تتضمن حزمة الإصدار الكاملة على Linux سكربت `update-shopnex-0.2.0.sh`. ضعه في جذر مجلد المشروع القديم وشغّله من Terminal بـ`bash update-shopnex-0.2.0.sh`؛ يحفظ `.env` ومفتاح الأسرار وملف SQLite المحلي إذا أمكن تحديده، ينسخ الملفات المحدّثة دون حذف البيانات، يثبت واجهة Debian/Ubuntu ويطبق ترحيل قاعدة البيانات. يحتاج `sudo`، ولا يحذف ملفات المشروع القديمة.
 
