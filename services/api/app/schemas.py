@@ -102,6 +102,37 @@ class InvoiceOutput(BaseModel):
     created_at: datetime
 
 
+class InvoiceLineOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    description: str
+    sku: str
+    quantity: Decimal
+    unit_price: Decimal
+    discount_percent: Decimal
+    discount_amount: Decimal
+    taxable_amount: Decimal
+    vat_rate: Decimal
+    tax_category: str
+    tax_reason: str
+    vat_amount: Decimal
+    total_amount: Decimal
+    price_includes_vat: bool
+
+
+class InvoicePaymentOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    method: str
+    amount: Decimal
+    created_at: datetime
+
+
+class InvoiceDetailOutput(InvoiceOutput):
+    lines: list[InvoiceLineOutput] = Field(default_factory=list)
+    payments: list[InvoicePaymentOutput] = Field(default_factory=list)
+
+
 class SupplierInput(BaseModel):
     supplier_code: str = Field(min_length=1, max_length=80)
     name: str = Field(min_length=1, max_length=240)

@@ -1,7 +1,7 @@
 {
   "name": "@shopnex/desktop",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 1420",
@@ -13,6 +13,7 @@
     "@fontsource/ibm-plex-sans-arabic": "^5.2.6",
     "@fontsource/inter": "^5.2.6",
     "@tauri-apps/api": "^2.8.0",
+    "jsbarcode": "^3.12.3",
     "lucide-react": "^0.468.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.1.0",

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BadgePercent, Banknote, Check, CreditCard, Minus, Plus, Search, ShoppingBag, Trash2, Utensils, WalletCards } from 'lucide-react';
 import type { AppLanguage } from '../../app/types';
-import { createInvoice, getProducts, type CatalogProduct } from '../../app/api';
+import { createInvoice, getInvoiceDetails, getPhase1InvoiceQr, getProducts, type CatalogProduct } from '../../app/api';
+import InvoiceReceipt, { buildDemoQrPayload, type InvoiceReceiptPayload } from '../sales/InvoiceReceipt';
 
 type Product = CatalogProduct & { tint?: string; symbol?: string };
 type Cart = Record<string, number>;
+type ReceiptState = { invoice: InvoiceReceiptPayload; qrBase64: string | null; qrDisclaimer: string; sellerName?: string; vatNumber?: string; demoMode: boolean };
 
 const previewProducts: Product[] = [
   { id: 'preview-burger', sku: 'FD-001', name: 'برجر لحم', category: 'وجبات', price: '32.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, average_cost: '18.00', quantity: '80', price_includes_vat: false, active: true, tint: 'rose', symbol: '🍔' },
@@ -47,8 +49,10 @@ function minorText(value: bigint): string {
 function formatMoney(value: bigint, ar: boolean): string {
   const sign = value < 0n ? '−' : '';
   const absolute = value < 0n ? -value : value;
-  const whole = new Intl.NumberFormat('en-US').format(absolute / 100n);
-  return `${sign}${whole}.${String(absolute % 100n).padStart(2, '0')} ${ar ? 'ر.س' : 'SAR'}`;
+  const locale = ar ? 'ar-SA' : 'en-US';
+  const whole = new Intl.NumberFormat(locale).format(absolute / 100n);
+  const fraction = new Intl.NumberFormat(locale, { useGrouping: false, minimumIntegerDigits: 2, maximumFractionDigits: 0 }).format(Number(absolute % 100n));
+  return `${sign}${whole}${ar ? '٫' : '.'}${fraction} ${ar ? 'ر.س' : 'SAR'}`;
 }
 
 function calculateCart(products: Product[], cart: Cart, discountPercent: string) {
@@ -95,6 +99,7 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
+  const [receipt, setReceipt] = useState<ReceiptState | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -134,7 +139,34 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
 
   const checkout = async () => {
     if (demoMode) {
-      setNotice(t('عرض تجريبي فقط: لم يتم حفظ البيع أو خصم المخزون.','Preview only: no sale was saved and stock was not changed.'));
+      if (!totals.lines.length || tendered === 0n || invalidPayment || invalidDiscount) return;
+      const createdAt = new Date().toISOString();
+      const invoiceNumber = `DEMO-${createdAt.replace(/\D/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const amountPaid = totals.total > tendered ? tendered : totals.total;
+      const demoInvoice: InvoiceReceiptPayload = {
+        id: invoiceNumber, invoice_number: invoiceNumber, customer_name: ar ? 'عميل معاينة' : 'Demo customer',
+        invoice_type: 'simplified', status: amountPaid >= totals.total ? 'paid' : 'partially_paid',
+        subtotal: minorText(totals.subtotal), discount_total: minorText(totals.discount), taxable_subtotal: minorText(totals.taxable),
+        vat_total: minorText(totals.vat), total: minorText(totals.total), amount_paid: minorText(amountPaid),
+        change_due: minorText(change), currency: 'SAR', created_at: createdAt,
+        lines: totals.lines.map(({ product, quantity, discount: lineDiscount, taxable, vat, total }) => ({
+          id: `demo-${product.id}`, description: product.name, sku: product.sku, quantity: String(quantity),
+          unit_price: product.price, discount_percent: discount || '0', discount_amount: minorText(lineDiscount),
+          taxable_amount: minorText(taxable), vat_rate: product.vat_rate, tax_category: product.tax_category,
+          tax_reason: product.tax_reason, vat_amount: minorText(vat), total_amount: minorText(total),
+          price_includes_vat: product.price_includes_vat,
+        })),
+        payments: [
+          ...(cashMinor > 0n ? [{ id: 'demo-cash', method: 'cash', amount: minorText(cashMinor < amountPaid ? cashMinor : amountPaid), created_at: createdAt }] : []),
+          ...(cardMinor > 0n ? [{ id: 'demo-card', method: 'card', amount: minorText(cardMinor < amountPaid ? cardMinor : amountPaid), created_at: createdAt }] : []),
+        ],
+      };
+      setReceipt({
+        invoice: demoInvoice, qrBase64: buildDemoQrPayload(demoInvoice), demoMode: true,
+        qrDisclaimer: t('QR تجريبي بعلامة VAT غير حقيقية؛ لا يصلح كرمز زاتكا ولا يرسل بيانات.', 'Demo QR with a non-real VAT marker; not a ZATCA QR and no data is submitted.'),
+      });
+      setNotice(`${t('تم إنشاء معاينة فاتورة مؤقتة','Temporary invoice preview created')}: ${invoiceNumber} · ${t('الإجمالي','Total')} ${formatMoney(totals.total, ar)}`);
+      setCart({}); setDiscount('0'); setCashAmount('0'); setCardAmount('0');
       return;
     }
     if (totals.lines.length === 0 || tendered === 0n || invalidPayment || invalidDiscount) return;
@@ -153,8 +185,21 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
       });
       setNotice(`${t('تم حفظ الفاتورة','Invoice saved')}: ${saved.invoice_number} · ${t('الإجمالي','Total')} ${formatMoney(scaled(saved.total), ar)}${change > 0n ? ` · ${t('الباقي','Change')} ${formatMoney(scaled(saved.change_due), ar)}` : ''}`);
       setCart({}); setDiscount('0'); setCashAmount('0'); setCardAmount('0');
-      const freshProducts = await getProducts();
-      setProducts(freshProducts);
+      void getProducts().then(setProducts).catch(() => undefined);
+      try {
+        const detail = await getInvoiceDetails(saved.id);
+        let qrBase64: string | null = null;
+        let qrDisclaimer = t('أدخل الاسم النظامي ورقم VAT في إعدادات زاتكا لإنشاء معاينة QR محلية.', 'Set the legal seller name and VAT number in ZATCA settings to create a local QR preview.');
+        let sellerName: string | undefined;
+        let vatNumber: string | undefined;
+        try {
+          const qr = await getPhase1InvoiceQr(saved.id);
+          qrBase64 = qr.qr_base64; qrDisclaimer = qr.disclaimer; sellerName = qr.seller_name; vatNumber = qr.vat_number;
+        } catch { /* The invoice is saved even when seller QR settings are incomplete. */ }
+        setReceipt({ invoice: detail, qrBase64, qrDisclaimer, sellerName, vatNumber, demoMode: false });
+      } catch {
+        setError(t(`حُفظت الفاتورة ${saved.invoice_number} بنجاح، لكن تعذر تحميل تفاصيل الطباعة. يمكنك فتحها من سجل الفواتير.`, `Invoice ${saved.invoice_number} was saved, but its print details could not be loaded. Open it from the invoice register.`));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('تعذر حفظ الفاتورة','Could not save the invoice'));
     } finally { setSaving(false); }
@@ -199,5 +244,6 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
         <small className="pos-server-note">{demoMode ? t('المعاينة لا تنشئ معاملة فعلية.','Preview does not create a real transaction.') : t('يعيد الخادم احتساب السعر والضريبة من سجل الصنف قبل الحفظ.','Server rechecks catalog prices and tax before commit.')}</small>
       </aside>
     </div>
+    {receipt && <InvoiceReceipt invoice={receipt.invoice} qrBase64={receipt.qrBase64} qrDisclaimer={receipt.qrDisclaimer} sellerName={receipt.sellerName} vatNumber={receipt.vatNumber} lang={lang} demoMode={receipt.demoMode} onClose={() => setReceipt(null)}/>}
   </section>;
 }

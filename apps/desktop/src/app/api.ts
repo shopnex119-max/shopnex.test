@@ -111,12 +111,47 @@ export interface SavedInvoice {
   created_at: string;
 }
 
+export interface InvoiceLineRecord {
+  id: string;
+  description: string;
+  sku: string;
+  quantity: string | number;
+  unit_price: string | number;
+  discount_percent: string | number;
+  discount_amount: string | number;
+  taxable_amount: string | number;
+  vat_rate: string | number;
+  tax_category: string;
+  tax_reason: string;
+  vat_amount: string | number;
+  total_amount: string | number;
+  price_includes_vat: boolean;
+}
+
+export interface InvoicePaymentRecord {
+  id: string;
+  method: string;
+  amount: string | number;
+  created_at: string;
+}
+
+export interface InvoiceDetail extends SavedInvoice {
+  customer_name: string;
+  invoice_type: string;
+  lines: InvoiceLineRecord[];
+  payments: InvoicePaymentRecord[];
+}
+
 export async function createInvoice(input: CreateInvoiceInput) {
   return apiRequest<SavedInvoice>('/api/v1/invoices', { method: 'POST', body: JSON.stringify(input) });
 }
 
 export async function getInvoices() {
   return apiRequest<SavedInvoice[]>('/api/v1/invoices');
+}
+
+export async function getInvoiceDetails(invoiceId: string) {
+  return apiRequest<InvoiceDetail>(`/api/v1/invoices/${encodeURIComponent(invoiceId)}`);
 }
 
 export interface Supplier {
@@ -188,7 +223,7 @@ export async function getFinanceReport(startDate?: string, endDate?: string) {
   return apiRequest<FinanceReport>(`/api/v1/reports/overview${query.size ? `?${query.toString()}` : ''}`);
 }
 export async function getPhase1InvoiceQr(invoiceId: string) {
-  return apiRequest<{ invoice_id: string; invoice_number: string; format: string; qr_base64: string; tags: { tag: number; length: number; value: string }[]; phase2_ready: boolean; authority_contacted: boolean; disclaimer: string }>(`/api/v1/zatca/invoices/${encodeURIComponent(invoiceId)}/qr/phase1`);
+  return apiRequest<{ invoice_id: string; invoice_number: string; seller_name: string; vat_number: string; format: string; qr_base64: string; tags: { tag: number; length: number; value: string }[]; phase2_ready: boolean; authority_contacted: boolean; disclaimer: string }>(`/api/v1/zatca/invoices/${encodeURIComponent(invoiceId)}/qr/phase1`);
 }
 
 export type ModuleName = 'restaurant' | 'crm' | 'hr';
