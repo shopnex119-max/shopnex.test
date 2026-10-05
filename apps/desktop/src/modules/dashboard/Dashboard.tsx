@@ -1,5 +1,6 @@
-import { ArrowDownLeft, ArrowUpLeft, ArrowUpRight, BookOpenCheck, Boxes, CircleAlert, FileCheck2, FileText, Plus, ShieldAlert, ShoppingBag, WalletCards } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpLeft, ArrowUpRight, BookOpenCheck, Boxes, CircleAlert, FileCheck2, FileText, LockKeyhole, Plus, ShieldAlert, ShoppingBag, WalletCards } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { isPublicPreview } from '../../app/api';
 import type { AppLanguage, PageKey } from '../../app/types';
 
 const salesSeries = [
@@ -60,7 +61,7 @@ export default function Dashboard({ lang, onNavigate }: { lang: AppLanguage; onN
     </div>
     <div className="dashboard-lower-grid">
       <article className="panel invoices-panel"><div className="panel-heading"><div><span className="eyebrow">{t('آخر النشاطات','LATEST ACTIVITY')}</span><h2>{t('أحدث الفواتير','Recent invoices')}</h2></div><button className="text-button" onClick={() => onNavigate('invoices')}>{t('كل الفواتير','All invoices')}<ArrowUpLeft size={14}/></button></div>
-        <div className="invoice-table-wrap"><table className="data-table"><thead><tr><th>{t('رقم الفاتورة','Invoice')}</th><th>{t('العميل','Customer')}</th><th>{t('الوقت','Time')}</th><th>{t('الحالة','Status')}</th><th>{t('الإجمالي','Total')}</th></tr></thead><tbody>{recent.map((row) => <tr key={row.id}><td><b className="mono-cell">{row.id}</b></td><td>{row.customer}</td><td className="muted-cell">{row.time}</td><td><span className={`status-chip ${row.color}`}><i/>{row.status}</span></td><td className="amount-cell">{row.amount} <small>ر.س</small></td></tr>)}</tbody></table></div>
+        {isPublicPreview ? <div className="dashboard-sensitive-mask"><LockKeyhole size={20}/><div><b>{t('الفواتير مقفلة في المعاينة العامة','Invoices locked in public preview')}</b><span>{t('سجّل الدخول إلى النسخة المحلية لعرض سجل الفواتير.','Sign in to the local app to view the invoice register.')}</span></div></div> : <div className="invoice-table-wrap"><table className="data-table"><thead><tr><th>{t('رقم الفاتورة','Invoice')}</th><th>{t('العميل','Customer')}</th><th>{t('الوقت','Time')}</th><th>{t('الحالة','Status')}</th><th>{t('الإجمالي','Total')}</th></tr></thead><tbody>{recent.map((row) => <tr key={row.id}><td><b className="mono-cell">{row.id}</b></td><td>{row.customer}</td><td className="muted-cell">{row.time}</td><td><span className={`status-chip ${row.color}`}><i/>{row.status}</span></td><td className="amount-cell">{row.amount} <small>ر.س</small></td></tr>)}</tbody></table></div>}
       </article>
       <article className="panel compliance-panel"><div className="panel-heading"><div><span className="eyebrow">{t('الفوترة الإلكترونية','E-INVOICING')}</span><h2>{t('مركز زاتكا','ZATCA center')}</h2></div><button className="round-arrow" onClick={() => onNavigate('zatca')} aria-label={t('فتح زاتكا','Open ZATCA')}><ArrowUpLeft size={17}/></button></div>
         <div className="zatca-status-card"><div className="zatca-emblem"><ShieldAlert size={21}/></div><div className="zatca-status-copy"><b>{t('لم يتم إعداد الربط بعد','Connection not configured')}</b><span>{t('ابدأ بإضافة بيانات المنشأة في وضع الاختبار.','Add company details to start in sandbox.')}</span></div><span className="status-chip amber"><i/>{t('يتطلب إعدادًا','SETUP')}</span></div>
