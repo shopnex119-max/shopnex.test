@@ -6,7 +6,9 @@
 
 ## تنزيل نسخة Windows للتجربة
 
-حزمة Windows x64 الكاملة، بما فيها المُثبت وسكربت التثبيت بنقرة مزدوجة، متاحة من [صفحة الإصدارات على GitHub](https://github.com/shopnex119-max/shopnex-ultimate/releases/latest).
+حزمة Windows x64 الكاملة، بما فيها المُثبت وسكربت التثبيت بنقرة مزدوجة، متاحة من [صفحة الإصدارات على GitHub](https://github.com/shopnex119-max/shopnex.test/releases/latest).
+
+يمكنك [فتح المعاينة العامة في المتصفح](https://shopnex119-max.github.io/shopnex.test/). تستخدم بيانات توضيحية فقط، ولا تحفظ سجلات أو تتصل بخدمة API أو زاتكا.
 
 ## المتطلبات
 

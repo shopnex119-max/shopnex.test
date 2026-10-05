@@ -128,7 +128,7 @@ export default function App() {
         </header>
         <div className="page-content" key={`${page}-${lang}`}>
           {page === 'overview' && <Dashboard lang={lang} onNavigate={setPage}/>}
-          {page === 'zatca' && <ZatcaPage lang={lang}/>}
+          {page === 'zatca' && <ZatcaPage lang={lang} demoMode={authMode === 'demo'}/>}
           {(page === 'sales' || page === 'invoices') && <OperationsPage lang={lang} mode={page}/>}
           {page === 'inventory' && <InventoryPage lang={lang}/>}
           {page === 'products' && <InventoryPage lang={lang} productsOnly/>}
