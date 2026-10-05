@@ -4,6 +4,7 @@ from sqlalchemy import text
 
 from app.api.auth import router as auth_router
 from app.api.accounting import router as accounting_router
+from app.api.admin import router as admin_router
 from app.api.modules import router as modules_router
 from app.api.operations import router as operations_router
 from app.api.purchasing import router as purchasing_router
@@ -13,7 +14,7 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 
 app = FastAPI(
-    title="SHOPNEX Local API", version="0.4.0",
+    title="SHOPNEX Local API", version="0.5.0",
     description="Local-first business API. ZATCA authority submission is intentionally disabled until official specifications and taxpayer onboarding are verified.",
     docs_url="/docs", redoc_url="/redoc",
 )
@@ -21,6 +22,7 @@ app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins, allow
                    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
                    allow_headers=["Content-Type", "Authorization", "X-Company-ID"])
 app.include_router(auth_router, prefix=f"{settings.api_prefix}")
+app.include_router(admin_router, prefix=f"{settings.api_prefix}")
 app.include_router(accounting_router, prefix=f"{settings.api_prefix}")
 app.include_router(modules_router, prefix=f"{settings.api_prefix}")
 app.include_router(operations_router, prefix=f"{settings.api_prefix}")
