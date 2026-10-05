@@ -58,6 +58,59 @@ export async function getHealth() {
   return apiRequest<{ status: string; database: string; integration_mode: string }>('/api/health');
 }
 
+export interface CatalogProduct {
+  id: string;
+  sku: string;
+  name: string;
+  category: string;
+  price: string;
+  vat_rate: string;
+  quantity: string;
+  price_includes_vat: boolean;
+  active: boolean;
+}
+
+export async function getProducts() {
+  return apiRequest<CatalogProduct[]>('/api/v1/products');
+}
+
+export type CreateProductInput = Omit<CatalogProduct, 'id' | 'active'>;
+
+export async function createProduct(input: CreateProductInput) {
+  return apiRequest<CatalogProduct>('/api/v1/products', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export interface CreateInvoiceInput {
+  invoice_number: string;
+  customer_name: string;
+  invoice_type: 'simplified';
+  lines: { product_id: string; quantity: string; discount_percent: string }[];
+  payments: { method: 'cash' | 'card'; amount: string }[];
+}
+
+export interface SavedInvoice {
+  id: string;
+  invoice_number: string;
+  status: string;
+  subtotal: string;
+  discount_total: string;
+  taxable_subtotal: string;
+  vat_total: string;
+  total: string;
+  amount_paid: string;
+  change_due: string;
+  currency: string;
+  created_at: string;
+}
+
+export async function createInvoice(input: CreateInvoiceInput) {
+  return apiRequest<SavedInvoice>('/api/v1/invoices', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function getInvoices() {
+  return apiRequest<SavedInvoice[]>('/api/v1/invoices');
+}
+
 export type ModuleName = 'restaurant' | 'crm' | 'hr';
 export interface ModuleRecord {
   id: string;

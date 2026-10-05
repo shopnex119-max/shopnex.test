@@ -41,6 +41,7 @@ class Product(Base):
     category: Mapped[str] = mapped_column(String(120), default="عام")
     price: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=Decimal("0"))
     vat_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("15.00"))
+    price_includes_vat: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False, default=Decimal("0"))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -56,12 +57,56 @@ class Invoice(Base):
     invoice_type: Mapped[str] = mapped_column(String(40), default="simplified")
     status: Mapped[str] = mapped_column(String(40), default="draft")
     subtotal: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"))
+    discount_total: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"))
+    taxable_subtotal: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"))
     vat_total: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"))
     total: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"))
+    amount_paid: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"))
+    change_due: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"))
     currency: Mapped[str] = mapped_column(String(3), default="SAR")
     zatca_uuid: Mapped[str | None] = mapped_column(String(36), nullable=True, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     __table_args__ = (UniqueConstraint("company_id", "invoice_number", name="uq_invoice_company_number"),)
+
+
+class InvoiceLine(Base):
+    __tablename__ = "invoice_lines"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    invoice_id: Mapped[str] = mapped_column(ForeignKey("invoices.id", ondelete="CASCADE"), index=True)
+    product_id: Mapped[str] = mapped_column(ForeignKey("products.id", ondelete="RESTRICT"), index=True)
+    description: Mapped[str] = mapped_column(String(240), nullable=False)
+    sku: Mapped[str] = mapped_column(String(80), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    discount_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("0"))
+    discount_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    taxable_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    vat_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    vat_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    total_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    price_includes_vat: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class InvoicePayment(Base):
+    __tablename__ = "invoice_payments"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    invoice_id: Mapped[str] = mapped_column(ForeignKey("invoices.id", ondelete="CASCADE"), index=True)
+    method: Mapped[str] = mapped_column(String(24), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class InventoryMovement(Base):
+    __tablename__ = "inventory_movements"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    company_id: Mapped[str] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
+    product_id: Mapped[str] = mapped_column(ForeignKey("products.id", ondelete="RESTRICT"), index=True)
+    invoice_id: Mapped[str] = mapped_column(ForeignKey("invoices.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), index=True)
+    movement_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    quantity_change: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
+    balance_after: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class ZatcaSettings(Base):

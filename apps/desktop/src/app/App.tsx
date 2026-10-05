@@ -4,7 +4,7 @@ import {
   ChefHat, ChevronDown, ChevronLeft, CircleHelp,
   Command, CreditCard, FileText, Globe2, LayoutDashboard, LifeBuoy,
   Menu, Moon, Package, PanelRightClose, PanelRightOpen, Search, Settings2, ShieldCheck,
-  ShoppingCart, Sun, Users, WalletCards, Warehouse, X,
+  ShoppingCart, Sun, UtensilsCrossed, Users, WalletCards, Warehouse, X,
 } from 'lucide-react';
 import type { AppPage, AppLanguage, PageKey, ThemeMode } from './types';
 import { getAuthStatus, setAccessToken } from './api';
@@ -15,16 +15,21 @@ import OperationsPage from '../modules/sales/OperationsPage';
 import InventoryPage from '../modules/inventory/InventoryPage';
 import SettingsPage from '../modules/setup/SettingsPage';
 import ModuleWorkspace from '../modules/workspace/ModuleWorkspace';
+import PosPage from '../modules/pos/PosPage';
+import KitchenPage from '../modules/restaurant/KitchenPage';
+import GuestPage from '../modules/restaurant/GuestPage';
 
 const nav: AppPage[] = [
   { key: 'overview', label: 'نظرة عامة', labelEn: 'Overview', icon: 'dashboard', group: 'مركز القيادة', groupEn: 'Command center', ready: true },
-  { key: 'sales', label: 'نقطة البيع', labelEn: 'Point of sale', icon: 'pos', group: 'التشغيل', groupEn: 'Operations', ready: true },
+  { key: 'sales', label: 'الكاشير ونقطة البيع', labelEn: 'Cashier & POS', icon: 'pos', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'invoices', label: 'الفواتير والمبيعات', labelEn: 'Invoices & sales', icon: 'invoice', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'purchasing', label: 'المشتريات', labelEn: 'Purchasing', icon: 'purchase', group: 'التشغيل', groupEn: 'Operations' },
   { key: 'inventory', label: 'المخزون والمستودعات', labelEn: 'Inventory & warehouses', icon: 'inventory', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'products', label: 'المنتجات', labelEn: 'Products', icon: 'products', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'customers', label: 'العملاء والموردون', labelEn: 'Customers & suppliers', icon: 'users', group: 'العلاقات', groupEn: 'Relationships' },
   { key: 'restaurant', label: 'المطاعم والمطبخ', labelEn: 'Restaurant & kitchen', icon: 'kitchen', group: 'الضيافة', groupEn: 'Hospitality', ready: true },
+  { key: 'kitchen', label: 'شاشة المطبخ', labelEn: 'Kitchen display', icon: 'kitchen', group: 'الضيافة', groupEn: 'Hospitality', ready: true },
+  { key: 'guest', label: 'شاشة الضيف والطلب', labelEn: 'Guest ordering screen', icon: 'guest', group: 'الضيافة', groupEn: 'Hospitality', ready: true },
   { key: 'crm', label: 'CRM والولاء', labelEn: 'CRM & loyalty', icon: 'crm', group: 'العلاقات', groupEn: 'Relationships', ready: true },
   { key: 'accounting', label: 'المحاسبة والضريبة', labelEn: 'Accounting & tax', icon: 'accounting', group: 'المالية', groupEn: 'Finance' },
   { key: 'zatca', label: 'زاتكا والفوترة', labelEn: 'ZATCA & e-invoicing', icon: 'zatca', group: 'المالية', groupEn: 'Finance', ready: true },
@@ -35,7 +40,7 @@ const nav: AppPage[] = [
 
 const iconMap: Record<string, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard, pos: CreditCard, invoice: FileText, purchase: ShoppingCart,
-  inventory: Warehouse, products: Package, users: Users, kitchen: ChefHat, crm: BriefcaseBusiness,
+  inventory: Warehouse, products: Package, users: Users, kitchen: ChefHat, guest: UtensilsCrossed, crm: BriefcaseBusiness,
   accounting: WalletCards, zatca: ShieldCheck, reports: BarChart3, people: Building2, settings: Settings2,
 };
 
@@ -129,15 +134,18 @@ export default function App() {
         <div className="page-content" key={`${page}-${lang}`}>
           {page === 'overview' && <Dashboard lang={lang} onNavigate={setPage}/>}
           {page === 'zatca' && <ZatcaPage lang={lang} demoMode={authMode === 'demo'}/>}
-          {(page === 'sales' || page === 'invoices') && <OperationsPage lang={lang} mode={page}/>}
-          {page === 'inventory' && <InventoryPage lang={lang}/>}
-          {page === 'products' && <InventoryPage lang={lang} productsOnly/>}
+          {page === 'sales' && <PosPage lang={lang} demoMode={authMode === 'demo'}/>}
+          {page === 'invoices' && <OperationsPage lang={lang} mode="invoices" demoMode={authMode === 'demo'}/>}
+          {page === 'inventory' && <InventoryPage lang={lang} demoMode={authMode === 'demo'}/>}
+          {page === 'products' && <InventoryPage lang={lang} productsOnly demoMode={authMode === 'demo'}/>}
           {page === 'restaurant' && <ModuleWorkspace module="restaurant" lang={lang} demoMode={authMode === 'demo'}/>}
+          {page === 'kitchen' && <KitchenPage lang={lang} demoMode={authMode === 'demo'}/>}
+          {page === 'guest' && <GuestPage lang={lang}/>}
           {page === 'crm' && <ModuleWorkspace module="crm" lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'hr' && <ModuleWorkspace module="hr" lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'settings' && <SettingsPage lang={lang}/>}
           {page === 'coming-soon' && <ComingSoon lang={lang} title={isAr ? comingPage?.label : comingPage?.labelEn}/>}
-          {page === 'purchasing' && <OperationsPage lang={lang} mode="purchasing"/>}
+          {page === 'purchasing' && <OperationsPage lang={lang} mode="purchasing" demoMode={authMode === 'demo'}/>}
           {(page === 'accounting' || page === 'customers' || page === 'reports') && <ComingSoon lang={lang} title={nav.find((n) => n.key === page)?.[isAr ? 'label' : 'labelEn']}/>}
         </div>
         <footer className="app-footer"><span>SHOPNEX ULTIMATE <i>·</i> v0.2.0</span><span>{t('مصمم لدعم متطلبات الفوترة الإلكترونية ذات الصلة','Designed to support applicable e-invoicing requirements')} <ShieldCheck size={13}/></span></footer>
