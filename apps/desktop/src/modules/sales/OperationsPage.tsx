@@ -1,0 +1,27 @@
+import { useMemo, useState } from 'react';
+import { ArrowDownLeft, ArrowUpLeft, Download, FilePlus2, Filter, Plus, Search, ShoppingBag, ShoppingCart } from 'lucide-react';
+import type { AppLanguage, PageKey } from '../../app/types';
+
+const records = [
+  { id: 'INV-2048', name: 'مؤسسة الندى التجارية', date: '02 أكتوبر 2026', channel: 'نقطة بيع — العليا', amount: 2875, state: 'مدفوعة' },
+  { id: 'INV-2047', name: 'شركة مدار التقنية', date: '02 أكتوبر 2026', channel: 'مبيعات — جدة', amount: 1240.5, state: 'بانتظار الدفع' },
+  { id: 'INV-2046', name: 'عميل نقدي', date: '02 أكتوبر 2026', channel: 'نقطة بيع — العليا', amount: 386, state: 'مدفوعة' },
+  { id: 'INV-2045', name: 'روائع المنزل', date: '01 أكتوبر 2026', channel: 'مبيعات — الخبر', amount: 5100, state: 'مسودة' },
+  { id: 'INV-2044', name: 'مؤسسة بريق', date: '01 أكتوبر 2026', channel: 'نقطة بيع — الدمام', amount: 820, state: 'مدفوعة' },
+];
+
+export default function OperationsPage({ lang, mode }: { lang: AppLanguage; mode: PageKey | 'purchasing' }) {
+  const ar = lang === 'ar';
+  const pos = mode === 'sales';
+  const purchasing = mode === 'purchasing';
+  const title = pos ? (ar ? 'نقطة البيع والمبيعات' : 'Point of sale & sales') : purchasing ? (ar ? 'المشتريات' : 'Purchasing') : (ar ? 'الفواتير والمبيعات' : 'Invoices & sales');
+  const [search, setSearch] = useState('');
+  const [notice, setNotice] = useState(false);
+  const visible = useMemo(() => records.filter((r) => `${r.id} ${r.name} ${r.channel}`.toLowerCase().includes(search.toLowerCase())), [search]);
+  return <section className="operations-page">
+    <div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-star">✦</span>{ar ? 'مساحة العمل · العمليات' : 'WORKSPACE · OPERATIONS'}</div><h1>{title}<span className="heading-period">.</span></h1><p>{ar ? 'نظرة واضحة على مستندات وحركة اليوم.' : 'A clear view of today’s documents and activity.'}</p></div><div className="heading-actions"><span className="demo-pill"><i/>{ar ? 'بيانات تجريبية' : 'DEMO DATA'}</span><button className="button button-primary" onClick={() => setNotice(true)}><Plus size={15}/>{pos ? (ar ? 'بيع جديد' : 'New sale') : purchasing ? (ar ? 'طلب شراء' : 'New purchase') : (ar ? 'فاتورة جديدة' : 'New invoice')}</button></div></div>
+    {notice && <div className="inline-alert warning"><span><ShoppingBag size={16}/></span>{ar ? 'واجهة المعاملة الأولية جاهزة، لكن حفظ المستندات المحاسبية سيُفعّل بعد توصيل الخدمة المحلية وقاعدة البيانات.' : 'The transaction shell is ready; accounting document persistence will activate when the local API and database are connected.'}<button className="icon-button" onClick={() => setNotice(false)}><ArrowDownLeft size={15}/></button></div>}
+    <div className="operations-summary"><div className="panel ops-summary-card"><span className="metric-icon teal"><ShoppingBag size={17}/></span><span className="eyebrow">{ar ? 'إجمالي اليوم' : 'TODAY TOTAL'}</span><b>24,680 <small>ر.س</small></b><span className="change-up"><ArrowUpLeft size={13}/> 12.8% {ar ? 'عن أمس' : 'vs yesterday'}</span></div><div className="panel ops-summary-card"><span className="metric-icon blue"><FilePlus2 size={17}/></span><span className="eyebrow">{ar ? 'المستندات' : 'DOCUMENTS'}</span><b>148</b><span className="muted-cell">{ar ? 'فاتورة اليوم' : 'invoices today'}</span></div><div className="panel ops-summary-card"><span className="metric-icon violet"><ShoppingCart size={17}/></span><span className="eyebrow">{ar ? 'متوسط الفاتورة' : 'AVERAGE ORDER'}</span><b>166.75 <small>ر.س</small></b><span className="muted-cell">{ar ? 'للفروع النشطة' : 'across active branches'}</span></div></div>
+    <article className="panel records-panel"><div className="panel-heading"><div><span className="eyebrow">{ar ? 'سجل المستندات' : 'DOCUMENT REGISTER'}</span><h2>{ar ? 'آخر الفواتير' : 'Recent invoices'}</h2></div><div className="table-actions"><label className="table-search"><Search size={15}/><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={ar ? 'بحث في الفواتير' : 'Search invoices'}/></label><button className="button button-outline compact"><Filter size={14}/>{ar ? 'تصفية' : 'Filter'}</button><button className="icon-button export-button" title="Export"><Download size={16}/></button></div></div><div className="invoice-table-wrap"><table className="data-table"><thead><tr><th>{ar ? 'رقم المستند' : 'Reference'}</th><th>{ar ? 'العميل' : 'Customer'}</th><th>{ar ? 'التاريخ' : 'Date'}</th><th>{ar ? 'القناة / الفرع' : 'Channel / branch'}</th><th>{ar ? 'الحالة' : 'Status'}</th><th>{ar ? 'الإجمالي' : 'Total'}</th><th/></tr></thead><tbody>{visible.map((r) => <tr key={r.id}><td><b className="mono-cell">{r.id}</b></td><td>{r.name}</td><td className="muted-cell">{r.date}</td><td className="muted-cell">{r.channel}</td><td><span className={`status-chip ${r.state === 'مدفوعة' ? 'green' : r.state === 'مسودة' ? 'slate' : 'amber'}`}><i/>{r.state}</span></td><td className="amount-cell">{r.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} <small>ر.س</small></td><td><button className="icon-button row-arrow" aria-label="open"><ArrowUpLeft size={15}/></button></td></tr>)}</tbody></table></div><div className="table-footer"><span>{ar ? `عرض ${visible.length} من ${records.length} مستندات` : `Showing ${visible.length} of ${records.length} documents`}</span><div><button className="icon-button" disabled><ArrowDownLeft size={15}/></button><span>1 / 1</span><button className="icon-button" disabled><ArrowUpLeft size={15}/></button></div></div></article>
+  </section>;
+}

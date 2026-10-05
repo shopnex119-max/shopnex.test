@@ -1,0 +1,152 @@
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Activity, BarChart3, Bell, BriefcaseBusiness, Building2,
+  ChefHat, ChevronDown, ChevronLeft, CircleHelp,
+  Command, CreditCard, FileText, Globe2, LayoutDashboard, LifeBuoy,
+  Menu, Moon, Package, PanelRightClose, PanelRightOpen, Search, Settings2, ShieldCheck,
+  ShoppingCart, Sun, Users, WalletCards, Warehouse, X,
+} from 'lucide-react';
+import type { AppPage, AppLanguage, PageKey, ThemeMode } from './types';
+import { getAuthStatus, setAccessToken } from './api';
+import AuthGate from './AuthGate';
+import Dashboard from '../modules/dashboard/Dashboard';
+import ZatcaPage from '../modules/zatca/ZatcaPage';
+import OperationsPage from '../modules/sales/OperationsPage';
+import InventoryPage from '../modules/inventory/InventoryPage';
+import SettingsPage from '../modules/setup/SettingsPage';
+import ModuleWorkspace from '../modules/workspace/ModuleWorkspace';
+
+const nav: AppPage[] = [
+  { key: 'overview', label: 'نظرة عامة', labelEn: 'Overview', icon: 'dashboard', group: 'مركز القيادة', groupEn: 'Command center', ready: true },
+  { key: 'sales', label: 'نقطة البيع', labelEn: 'Point of sale', icon: 'pos', group: 'التشغيل', groupEn: 'Operations', ready: true },
+  { key: 'invoices', label: 'الفواتير والمبيعات', labelEn: 'Invoices & sales', icon: 'invoice', group: 'التشغيل', groupEn: 'Operations', ready: true },
+  { key: 'purchasing', label: 'المشتريات', labelEn: 'Purchasing', icon: 'purchase', group: 'التشغيل', groupEn: 'Operations' },
+  { key: 'inventory', label: 'المخزون والمستودعات', labelEn: 'Inventory & warehouses', icon: 'inventory', group: 'التشغيل', groupEn: 'Operations', ready: true },
+  { key: 'products', label: 'المنتجات', labelEn: 'Products', icon: 'products', group: 'التشغيل', groupEn: 'Operations', ready: true },
+  { key: 'customers', label: 'العملاء والموردون', labelEn: 'Customers & suppliers', icon: 'users', group: 'العلاقات', groupEn: 'Relationships' },
+  { key: 'restaurant', label: 'المطاعم والمطبخ', labelEn: 'Restaurant & kitchen', icon: 'kitchen', group: 'الضيافة', groupEn: 'Hospitality', ready: true },
+  { key: 'crm', label: 'CRM والولاء', labelEn: 'CRM & loyalty', icon: 'crm', group: 'العلاقات', groupEn: 'Relationships', ready: true },
+  { key: 'accounting', label: 'المحاسبة والضريبة', labelEn: 'Accounting & tax', icon: 'accounting', group: 'المالية', groupEn: 'Finance' },
+  { key: 'zatca', label: 'زاتكا والفوترة', labelEn: 'ZATCA & e-invoicing', icon: 'zatca', group: 'المالية', groupEn: 'Finance', ready: true },
+  { key: 'reports', label: 'التقارير والتحليلات', labelEn: 'Reports & analytics', icon: 'reports', group: 'الرؤية', groupEn: 'Insights' },
+  { key: 'hr', label: 'الموظفون والموارد البشرية', labelEn: 'People & HR', icon: 'people', group: 'الإدارة', groupEn: 'Administration', ready: true },
+  { key: 'settings', label: 'إعدادات النظام', labelEn: 'System settings', icon: 'settings', group: 'الإدارة', groupEn: 'Administration', ready: true },
+];
+
+const iconMap: Record<string, typeof LayoutDashboard> = {
+  dashboard: LayoutDashboard, pos: CreditCard, invoice: FileText, purchase: ShoppingCart,
+  inventory: Warehouse, products: Package, users: Users, kitchen: ChefHat, crm: BriefcaseBusiness,
+  accounting: WalletCards, zatca: ShieldCheck, reports: BarChart3, people: Building2, settings: Settings2,
+};
+
+function BrandMark() {
+  return <div className="brand-mark" aria-hidden="true"><span className="orbit orbit-a"/><span className="orbit orbit-b"/><span className="brand-core"/></div>;
+}
+
+export default function App() {
+  const [authMode, setAuthMode] = useState<'checking' | 'setup' | 'login' | 'demo' | 'authenticated'>('checking');
+  const [profile, setProfile] = useState<{ display_name: string; role: string } | null>(null);
+  const [page, setPage] = useState<PageKey>('overview');
+  const [comingPage, setComingPage] = useState<AppPage | null>(null);
+  const [lang, setLang] = useState<AppLanguage>('ar');
+  const [theme, setTheme] = useState<ThemeMode>('dark');
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  useEffect(() => {
+    const isDesktop = Boolean((window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
+    if (!isDesktop) { setAuthMode('demo'); return; }
+    let active = true;
+    getAuthStatus().then((status) => { if (active) setAuthMode(status.setup_required ? 'setup' : 'login'); })
+      .catch(() => { if (active) setAuthMode('login'); });
+    return () => { active = false; };
+  }, []);
+  const isAr = lang === 'ar';
+  const t = (ar: string, en: string) => isAr ? ar : en;
+  const activePage = useMemo(() => page === 'coming-soon' && comingPage ? comingPage : nav.find((item) => item.key === page && item.ready) ?? nav[0], [page, comingPage]);
+  const groups = useMemo(() => {
+    const filtered = nav.filter((item) => `${item.label} ${item.labelEn}`.toLowerCase().includes(query.toLowerCase()));
+    return [...new Set(filtered.map((item) => isAr ? item.group : item.groupEn))].map((group) => ({
+      name: group ?? '', items: filtered.filter((item) => (isAr ? item.group : item.groupEn) === group),
+    }));
+  }, [query, isAr]);
+
+  const choosePage = (item: AppPage) => {
+    if (item.ready) setPage(item.key);
+    else { setComingPage(item); setPage('coming-soon'); }
+    setMobileOpen(false);
+  };
+
+  if (authMode === 'checking') return <div className="auth-loading" dir={isAr ? 'rtl' : 'ltr'}><div className="brand-mark"><span className="orbit orbit-a"/><span className="orbit orbit-b"/><span className="brand-core"/></div><span>SHOPNEX</span></div>;
+  if (authMode === 'setup' || authMode === 'login') return <AuthGate mode={authMode} lang={lang} onSuccess={(user) => { setProfile(user); setAuthMode('authenticated'); }} onDemo={() => setAuthMode('demo')}/>;
+
+  return (
+    <div className={`app-shell ${theme}`} dir={isAr ? 'rtl' : 'ltr'} lang={lang}>
+      <div className="space-backdrop" aria-hidden="true"><span className="nebula nebula-one"/><span className="nebula nebula-two"/><span className="star-field"/></div>
+      <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'sidebar-mobile-open' : ''}`}>
+        <div className="brand-row">
+          <BrandMark />
+          {!collapsed && <div className="brand-copy"><strong>SHOPNEX</strong><span>ULTIMATE <i>•</i> BUSINESS OS</span></div>}
+          <button className="icon-button sidebar-mobile-close" aria-label={t('إغلاق القائمة','Close menu')} onClick={() => setMobileOpen(false)}><X size={18}/></button>
+        </div>
+        {!collapsed && <button className="workspace-switcher"><span className="workspace-icon"><Building2 size={16}/></span><span className="workspace-copy"><b>{t('مجموعة المدار التجارية','Orbit Trading Group')}</b><small>{t('المقر الرئيسي · الرياض','Head office · Riyadh')}</small></span><ChevronDown size={15}/></button>}
+        <div className="sidebar-search"><Search size={15}/>{!collapsed && <input aria-label={t('ابحث في القائمة','Search navigation')} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('بحث سريع','Quick search')} />} {!collapsed && <kbd>⌘ K</kbd>}</div>
+        <nav className="nav-scroll" aria-label={t('التنقل الرئيسي','Main navigation')}>
+          {groups.map((group) => <div className="nav-group" key={group.name}>
+            {!collapsed && <div className="nav-group-title">{group.name}</div>}
+            {group.items.map((item, index) => {
+              const Icon = iconMap[item.icon] ?? Package;
+              const selected = page === item.key && (item.key !== 'coming-soon' || item.label === comingPage?.label);
+              return <button className={`nav-item ${selected ? 'nav-item-active' : ''}`} key={`${item.label}-${index}`} onClick={() => choosePage(item)} title={collapsed ? (isAr ? item.label : item.labelEn) : undefined}>
+                <Icon size={17} strokeWidth={selected ? 2.1 : 1.75}/>{!collapsed && <><span>{isAr ? item.label : item.labelEn}</span>{item.key === 'zatca' && <span className="nav-dot"/>}{!item.ready && <span className="nav-soon">{t('قريبًا','SOON')}</span>}</>}
+              </button>;
+            })}
+          </div>)}
+        </nav>
+        <div className="sidebar-bottom">
+          {!collapsed && <div className="connection-card"><div className="connection-orb"><Activity size={15}/></div><div><b>{authMode === 'demo' ? t('وضع عرض تجريبي','Demo preview') : t('جلسة محلية','Local session')}</b><span><i className={`status-pulse ${authMode === 'demo' ? 'pulse-amber' : ''}`}/> {authMode === 'demo' ? t('API غير متصلة','API not connected') : t('اتصال محلي محمي','Secured local session')}</span></div></div>}
+          <button className="nav-item support-link" onClick={() => setPage('settings')}><LifeBuoy size={17}/>{!collapsed && <span>{t('المساعدة والدعم','Help & support')}</span>}</button>
+          <div className="user-profile"><div className="avatar">{profile?.display_name.slice(0, 1) ?? 'م'}</div>{!collapsed && <div className="user-copy"><b>{profile?.display_name ?? t('وضع العرض التجريبي','Demo mode')}</b><small>{profile?.role ?? 'SHOPNEX · DEMO'}</small></div>}{!collapsed && authMode === 'authenticated' && <button className="icon-button" onClick={() => { setAccessToken(null); setProfile(null); setAuthMode('login'); }} aria-label={t('تسجيل الخروج','Sign out')}><ChevronDown size={15}/></button>}</div>
+        </div>
+      </aside>
+      {mobileOpen && <button className="mobile-scrim" aria-label={t('إغلاق القائمة','Close navigation')} onClick={() => setMobileOpen(false)}/>}
+      <main className="main-panel">
+        <header className="topbar">
+          <div className="topbar-leading">
+            <button className="icon-button mobile-menu-button" aria-label={t('فتح القائمة','Open navigation')} onClick={() => setMobileOpen(true)}><Menu size={19}/></button>
+            <button className="icon-button collapse-button" aria-label={collapsed ? t('توسيع القائمة','Expand sidebar') : t('طي القائمة','Collapse sidebar')} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <PanelRightOpen size={18}/> : <PanelRightClose size={18}/>}</button>
+            <div className="breadcrumb"><span>{t(activePage.group ?? '', activePage.groupEn ?? '')}</span><ChevronLeft size={14}/><strong>{t(activePage.label, activePage.labelEn)}</strong></div>
+          </div>
+          <div className="topbar-actions">
+            <div className="topbar-search"><Search size={16}/><input placeholder={t('ابحث عن فاتورة، منتج، عميل…','Search invoices, products, customers…')} aria-label={t('بحث شامل','Global search')}/><kbd>⌘ K</kbd></div>
+            <button className="icon-button language-button" onClick={() => setLang(isAr ? 'en' : 'ar')} title={t('Switch to English','التبديل إلى العربية')}><Globe2 size={17}/><span>{isAr ? 'EN' : 'ع'}</span></button>
+            <button className="icon-button theme-button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={t('تغيير المظهر','Switch theme')}>{theme === 'dark' ? <Sun size={17}/> : <Moon size={17}/>}</button>
+            <button className="icon-button notification-button" aria-label={t('الإشعارات','Notifications')}><Bell size={17}/><i/></button>
+            <div className="topbar-divider"/>
+            <div className="clock-status"><span className={`clock-indicator ${authMode === 'demo' ? 'pulse-amber' : ''}`}/><span>{authMode === 'demo' ? t('عرض تجريبي','Demo preview') : t('جلسة محلية','Local session')}</span></div>
+          </div>
+        </header>
+        <div className="page-content" key={`${page}-${lang}`}>
+          {page === 'overview' && <Dashboard lang={lang} onNavigate={setPage}/>}
+          {page === 'zatca' && <ZatcaPage lang={lang}/>}
+          {(page === 'sales' || page === 'invoices') && <OperationsPage lang={lang} mode={page}/>}
+          {page === 'inventory' && <InventoryPage lang={lang}/>}
+          {page === 'products' && <InventoryPage lang={lang} productsOnly/>}
+          {page === 'restaurant' && <ModuleWorkspace module="restaurant" lang={lang} demoMode={authMode === 'demo'}/>}
+          {page === 'crm' && <ModuleWorkspace module="crm" lang={lang} demoMode={authMode === 'demo'}/>}
+          {page === 'hr' && <ModuleWorkspace module="hr" lang={lang} demoMode={authMode === 'demo'}/>}
+          {page === 'settings' && <SettingsPage lang={lang}/>}
+          {page === 'coming-soon' && <ComingSoon lang={lang} title={isAr ? comingPage?.label : comingPage?.labelEn}/>}
+          {page === 'purchasing' && <OperationsPage lang={lang} mode="purchasing"/>}
+          {(page === 'accounting' || page === 'customers' || page === 'reports') && <ComingSoon lang={lang} title={nav.find((n) => n.key === page)?.[isAr ? 'label' : 'labelEn']}/>}
+        </div>
+        <footer className="app-footer"><span>SHOPNEX ULTIMATE <i>·</i> v0.2.0</span><span>{t('مصمم لدعم متطلبات الفوترة الإلكترونية ذات الصلة','Designed to support applicable e-invoicing requirements')} <ShieldCheck size={13}/></span></footer>
+      </main>
+    </div>
+  );
+}
+
+function ComingSoon({ lang, title }: { lang: AppLanguage; title?: string }) {
+  const isAr = lang === 'ar';
+  return <section className="coming-soon-page"><div className="coming-orbit"><Command size={26}/></div><span className="eyebrow">{isAr ? 'وحدة SHOPNEX' : 'SHOPNEX MODULE'}</span><h1>{title ?? (isAr ? 'نوسّع المدار' : 'Expanding the orbit')}</h1><p>{isAr ? 'هذه الوحدة ضمن خارطة SHOPNEX وتُفعّل ضمن مرحلة التوسع القادمة. بياناتك تبقى محلية وآمنة.' : 'This module is on the SHOPNEX roadmap and will be enabled in a future expansion. Your data stays local and secure.'}</p><div className="coming-caption"><CircleHelp size={16}/>{isAr ? 'لا توجد عمليات تجريبية مضللة — كل شيء واضح قبل التفعيل.' : 'No pretend workflows — what is active is clearly marked.'}</div></section>;
+}
