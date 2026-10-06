@@ -30,7 +30,7 @@ const nav: AppPage[] = [
   { key: 'purchasing', label: 'المشتريات', labelEn: 'Purchasing', icon: 'purchase', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'inventory', label: 'المخزون والمستودعات', labelEn: 'Inventory & warehouses', icon: 'inventory', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'products', label: 'المنتجات', labelEn: 'Products', icon: 'products', group: 'التشغيل', groupEn: 'Operations', ready: true },
-  { key: 'customers', label: 'العملاء والموردون', labelEn: 'Customers & suppliers', icon: 'users', group: 'العلاقات', groupEn: 'Relationships' },
+  { key: 'customers', label: 'العملاء والموردون', labelEn: 'Customers & suppliers', icon: 'users', group: 'العلاقات', groupEn: 'Relationships', ready: true },
   { key: 'restaurant', label: 'المطاعم والمطبخ', labelEn: 'Restaurant & kitchen', icon: 'kitchen', group: 'الضيافة', groupEn: 'Hospitality', ready: true },
   { key: 'kitchen', label: 'شاشة المطبخ', labelEn: 'Kitchen display', icon: 'kitchen', group: 'الضيافة', groupEn: 'Hospitality', ready: true },
   { key: 'guest', label: 'شاشة الضيف والطلب', labelEn: 'Guest ordering screen', icon: 'guest', group: 'الضيافة', groupEn: 'Hospitality', ready: true },
@@ -164,7 +164,7 @@ export default function App() {
           <Suspense fallback={page === 'reports' ? <div className="finance-loading">{t('جارٍ تحميل لوحة التحليلات…','Loading analytics dashboard…')}</div> : null}>
             {page === 'reports' && <ReportsPage lang={lang} demoMode={authMode === 'demo'}/>}
           </Suspense>
-          {page === 'customers' && <ComingSoon lang={lang} title={nav.find((n) => n.key === page)?.[isAr ? 'label' : 'labelEn']}/>}
+          {page === 'customers' && <ModuleWorkspace module="crm" lang={lang} demoMode={authMode === 'demo'}/>}
         </div>
         <footer className="app-footer"><span>SHOPNEX ULTIMATE <i>·</i> v0.5.0</span><span>{t('مصمم لدعم متطلبات الفوترة الإلكترونية ذات الصلة','Designed to support applicable e-invoicing requirements')} <ShieldCheck size={13}/></span></footer>
       </main>

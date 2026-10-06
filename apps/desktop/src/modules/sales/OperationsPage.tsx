@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDownLeft, ArrowUpLeft, Download, FilePlus2, Filter, Plus, Printer, Search, ShoppingBag, ShoppingCart } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpLeft, Download, FilePlus2, Plus, Printer, Search, ShoppingBag, ShoppingCart } from 'lucide-react';
 import type { AppLanguage, PageKey } from '../../app/types';
 import { getInvoiceDetails, getInvoices, getPhase1InvoiceQr, type InvoiceDetail, type SavedInvoice } from '../../app/api';
 import InvoiceReceipt, { buildDemoQrPayload, type InvoiceReceiptPayload } from './InvoiceReceipt';
 
-type InvoiceRecord = { id: string; invoiceId?: string; name: string; date: string; channel: string; amount: string; state: string };
+type InvoiceRecord = { id: string; invoiceId?: string; name: string; date: string; channel: string; amount: string; state: string; invoiceType: 'tax' | 'simplified' | 'demo'; uploadStatus: 'uploaded' | 'not_uploaded' };
 type ReceiptState = { invoice: InvoiceReceiptPayload; qrBase64: string | null; qrDisclaimer: string; sellerName?: string; vatNumber?: string; demoMode: boolean };
 
 const demoRecords: InvoiceRecord[] = [
-  { id: 'INV-2048', name: 'مؤسسة الندى التجارية', date: '02 أكتوبر 2026', channel: 'نقطة بيع — العليا', amount: '2875.00', state: 'مدفوعة' },
-  { id: 'INV-2047', name: 'شركة مدار التقنية', date: '02 أكتوبر 2026', channel: 'مبيعات — جدة', amount: '1240.50', state: 'بانتظار الدفع' },
-  { id: 'INV-2046', name: 'عميل نقدي', date: '02 أكتوبر 2026', channel: 'نقطة بيع — العليا', amount: '386.00', state: 'مدفوعة' },
-  { id: 'INV-2045', name: 'روائع المنزل', date: '01 أكتوبر 2026', channel: 'مبيعات — الخبر', amount: '5100.00', state: 'مسودة' },
-  { id: 'INV-2044', name: 'مؤسسة بريق', date: '01 أكتوبر 2026', channel: 'نقطة بيع — الدمام', amount: '820.00', state: 'مدفوعة' },
+  { id: 'INV-2048', name: 'مؤسسة الندى التجارية', date: '02 أكتوبر 2026', channel: 'نقطة بيع — العليا', amount: '2875.00', state: 'مدفوعة', invoiceType: 'tax', uploadStatus: 'not_uploaded' },
+  { id: 'INV-2047', name: 'شركة مدار التقنية', date: '02 أكتوبر 2026', channel: 'مبيعات — جدة', amount: '1240.50', state: 'بانتظار الدفع', invoiceType: 'simplified', uploadStatus: 'not_uploaded' },
+  { id: 'INV-2046', name: 'عميل نقدي', date: '02 أكتوبر 2026', channel: 'نقطة بيع — العليا', amount: '386.00', state: 'مدفوعة', invoiceType: 'simplified', uploadStatus: 'not_uploaded' },
+  { id: 'INV-2045', name: 'روائع المنزل', date: '01 أكتوبر 2026', channel: 'مبيعات — الخبر', amount: '5100.00', state: 'مسودة', invoiceType: 'tax', uploadStatus: 'not_uploaded' },
+  { id: 'INV-2044', name: 'مؤسسة بريق', date: '01 أكتوبر 2026', channel: 'نقطة بيع — الدمام', amount: '820.00', state: 'مدفوعة', invoiceType: 'simplified', uploadStatus: 'not_uploaded' },
 ];
 
 function toMinor(value: string | number): bigint {
@@ -35,14 +35,14 @@ function formatMoney(value: bigint, ar: boolean) {
 function toRecord(invoice: SavedInvoice, lang: AppLanguage): InvoiceRecord {
   const date = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-SA-u-ca-gregory' : 'en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Riyadh' }).format(new Date(invoice.created_at));
   const state = invoice.status === 'paid' ? (lang === 'ar' ? 'مدفوعة' : 'Paid') : invoice.status === 'partially_paid' ? (lang === 'ar' ? 'مدفوعة جزئيًا' : 'Partially paid') : (lang === 'ar' ? 'مسودة' : 'Draft');
-  return { id: invoice.invoice_number, invoiceId: invoice.id, name: lang === 'ar' ? 'عميل نقدي' : 'Walk-in customer', date, channel: lang === 'ar' ? 'نقطة بيع · محلي' : 'POS · Local', amount: invoice.total, state };
+  return { id: invoice.invoice_number, invoiceId: invoice.id, name: lang === 'ar' ? 'عميل نقدي' : 'Walk-in customer', date, channel: lang === 'ar' ? 'نقطة بيع · محلي' : 'POS · Local', amount: invoice.total, state, invoiceType: invoice.invoice_type === 'tax' ? 'tax' : 'simplified', uploadStatus: 'not_uploaded' };
 }
 
-function demoSummaryInvoice(record: InvoiceRecord, lang: AppLanguage): InvoiceReceiptPayload {
+function demoSummaryInvoice(record: InvoiceRecord): InvoiceReceiptPayload {
   const total = record.amount;
   const paid = ['مدفوعة', 'Paid'].includes(record.state) ? total : '0.00';
   return {
-    id: record.id, invoice_number: record.id, customer_name: record.name, invoice_type: lang === 'ar' ? 'ملخص تجريبي' : 'DEMO SUMMARY',
+    id: record.id, invoice_number: record.id, customer_name: record.name, invoice_type: record.invoiceType === 'tax' ? 'tax' : 'simplified',
     status: record.state, subtotal: total, discount_total: '0.00', taxable_subtotal: total,
     vat_total: '0.00', total, amount_paid: paid, change_due: '0.00', currency: 'SAR',
     created_at: new Date().toISOString(), lines: [],
@@ -62,6 +62,8 @@ export default function OperationsPage({ lang, mode, demoMode }: { lang: AppLang
   const [notice, setNotice] = useState(false);
   const [openingId, setOpeningId] = useState('');
   const [receipt, setReceipt] = useState<ReceiptState | null>(null);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'tax' | 'simplified'>('all');
+  const [uploadFilter, setUploadFilter] = useState<'all' | 'uploaded' | 'not_uploaded'>('all');
 
   useEffect(() => {
     let active = true;
@@ -81,7 +83,7 @@ export default function OperationsPage({ lang, mode, demoMode }: { lang: AppLang
     return () => { active = false; };
   }, [demoMode, mode, lang, ar]);
 
-  const visible = useMemo(() => records.filter((record) => `${record.id} ${record.name} ${record.channel}`.toLowerCase().includes(search.toLowerCase())), [records, search]);
+  const visible = useMemo(() => records.filter((record) => `${record.id} ${record.name} ${record.channel}`.toLowerCase().includes(search.toLowerCase()) && (typeFilter === 'all' || record.invoiceType === typeFilter) && (uploadFilter === 'all' || record.uploadStatus === uploadFilter)), [records, search, typeFilter, uploadFilter]);
   const totalMinor = records.reduce((sum, record) => sum + toMinor(record.amount), 0n);
   const recordCount = BigInt(records.length);
   const averageMinor = recordCount === 0n ? 0n : (() => {
@@ -98,7 +100,7 @@ export default function OperationsPage({ lang, mode, demoMode }: { lang: AppLang
   const openInvoice = async (record: InvoiceRecord) => {
     setError(''); setOpeningId(record.id);
     if (!record.invoiceId) {
-      const invoice = demoSummaryInvoice(record, lang);
+      const invoice = demoSummaryInvoice(record);
       setReceipt({
         invoice, qrBase64: buildDemoQrPayload(invoice), demoMode: true,
         qrDisclaimer: t('بيانات المثال وQR تجريبيان، ولا يمثلان فاتورة حقيقية أو مستندًا مرسلًا لزاتكا.', 'Sample invoice and QR only; not a real invoice or a document submitted to ZATCA.'),
@@ -141,10 +143,10 @@ export default function OperationsPage({ lang, mode, demoMode }: { lang: AppLang
     </div>
     <article className="panel records-panel">
       <div className="panel-heading"><div><span className="eyebrow">{t('سجل المستندات', 'DOCUMENT REGISTER')}</span><h2>{t('الفواتير الأخيرة', 'Recent invoices')}</h2></div>
-        <div className="table-actions"><label className="table-search"><Search size={15}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('بحث في الفواتير', 'Search invoices')}/></label><button className="button button-outline compact"><Filter size={14}/>{t('تصفية', 'Filter')}</button><button className="icon-button export-button" title={t('تصدير', 'Export')}><Download size={16}/></button></div>
+        <div className="table-actions"><label className="table-search"><Search size={15}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('بحث في الفواتير', 'Search invoices')}/></label><select className="invoice-filter-select" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}><option value="all">{t('كل الأنواع', 'All types')}</option><option value="tax">{t('ضريبية', 'Tax')}</option><option value="simplified">{t('غير ضريبية / مبسطة', 'Non-tax / simplified')}</option></select><select className="invoice-filter-select" value={uploadFilter} onChange={(event) => setUploadFilter(event.target.value as typeof uploadFilter)}><option value="all">{t('كل حالات الرفع', 'All upload states')}</option><option value="uploaded">{t('مرفوعة', 'Uploaded')}</option><option value="not_uploaded">{t('غير مرفوعة', 'Not uploaded')}</option></select><button className="icon-button export-button" title={t('تصدير', 'Export')}><Download size={16}/></button></div>
       </div>
-      <div className="invoice-table-wrap"><table className="data-table"><thead><tr><th>{t('رقم المستند', 'Reference')}</th><th>{t('العميل', 'Customer')}</th><th>{t('التاريخ', 'Date')}</th><th>{t('القناة / الفرع', 'Channel / branch')}</th><th>{t('الحالة', 'Status')}</th><th>{t('الإجمالي', 'Total')}</th><th/></tr></thead>
-        <tbody>{visible.map((record) => <tr key={record.id}><td><b className="mono-cell">{record.id}</b></td><td>{record.name}</td><td className="muted-cell">{record.date}</td><td className="muted-cell">{record.channel}</td><td><span className={`status-chip ${stateIsPaid(record.state) ? 'green' : stateIsDraft(record.state) ? 'slate' : 'amber'}`}><i/>{record.state}</span></td><td className="amount-cell">{formatMoney(toMinor(record.amount), ar)}</td><td><button className="icon-button row-arrow" aria-label={t('فتح وطباعة الفاتورة', 'Open and print invoice')} title={t('فتح وطباعة', 'Open / print')} disabled={openingId === record.id} onClick={() => void openInvoice(record)}><Printer size={15}/><ArrowUpLeft size={11}/></button></td></tr>)}</tbody>
+      <div className="invoice-table-wrap"><table className="data-table"><thead><tr><th>{t('رقم المستند', 'Reference')}</th><th>{t('العميل', 'Customer')}</th><th>{t('التاريخ', 'Date')}</th><th>{t('القناة / الفرع', 'Channel / branch')}</th><th>{t('حالة الدفع', 'Payment status')}</th><th>{t('حالة الرفع', 'Upload status')}</th><th>{t('الإجمالي', 'Total')}</th><th/></tr></thead>
+        <tbody>{visible.map((record) => <tr key={record.id}><td><b className="mono-cell">{record.id}</b><small className="finance-subcell">{record.invoiceType === 'tax' ? t('فاتورة ضريبية', 'Tax invoice') : t('فاتورة مبسطة / غير ضريبية', 'Simplified / non-tax invoice')}</small></td><td>{record.name}</td><td className="muted-cell">{record.date}</td><td className="muted-cell">{record.channel}</td><td><span className={`status-chip ${stateIsPaid(record.state) ? 'green' : stateIsDraft(record.state) ? 'slate' : 'amber'}`}><i/>{record.state}</span></td><td><span className="status-chip amber"><i/>{record.uploadStatus === 'uploaded' ? t('مرفوعة', 'Uploaded') : t('غير مرفوعة', 'Not uploaded')}</span></td><td className="amount-cell">{formatMoney(toMinor(record.amount), ar)}</td><td><button className="icon-button row-arrow" aria-label={t('فتح وطباعة الفاتورة', 'Open and print invoice')} title={t('فتح وطباعة', 'Open / print')} disabled={openingId === record.id} onClick={() => void openInvoice(record)}><Printer size={15}/><ArrowUpLeft size={11}/></button></td></tr>)}</tbody>
       </table>{loading && <div className="module-empty">{t('جارٍ تحميل سجل الفواتير…', 'Loading invoices…')}</div>}{!loading && visible.length === 0 && <div className="module-empty">{demoMode ? t('لا توجد بيانات معاينة مطابقة.', 'No matching preview records.') : t('لا توجد فواتير محفوظة بعد. استخدم شاشة الكاشير لتسجيل أول بيع.', 'No saved invoices yet. Use the cashier to record the first sale.')}</div>}</div>
       <div className="table-footer"><span>{ar ? `عرض ${visible.length} من ${records.length} مستندات` : `Showing ${visible.length} of ${records.length} documents`}</span><div><button className="icon-button" disabled><ArrowDownLeft size={15}/></button><span>1 / 1</span><button className="icon-button" disabled><ArrowUpLeft size={15}/></button></div></div>
     </article>

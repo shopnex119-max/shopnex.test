@@ -113,6 +113,7 @@ export interface CreateInvoiceInput {
 export interface SavedInvoice {
   id: string;
   invoice_number: string;
+  invoice_type: 'simplified' | 'tax' | string;
   status: string;
   subtotal: string;
   discount_total: string;

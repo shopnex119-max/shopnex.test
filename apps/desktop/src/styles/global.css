@@ -364,3 +364,5 @@
 
 @media(max-width:760px){.payment-methods-panel{grid-column:auto}.payment-method-list{grid-template-columns:1fr}.payment-method-form{grid-template-columns:1fr 1fr}.payment-method-form label:nth-child(3){grid-column:1/-1}.payment-method-form .button{grid-column:1/-1}}
 .pos-invoice-type{display:flex;align-items:center;gap:8px;margin:7px 0;color:var(--muted);font-size:8px}.pos-invoice-type span{white-space:nowrap}.pos-invoice-type select{flex:1;height:32px;padding:0 8px;border:1px solid var(--border);border-radius:7px;color:var(--text-strong);background:var(--panel-soft);font-size:9px}
+.invoice-filter-select{height:32px;padding:0 8px;border:1px solid var(--border);border-radius:8px;background:var(--panel-strong);color:var(--subtle);font-size:8px}.payment-method-item code{color:var(--muted);font:7px ui-monospace,monospace}.payment-method-form{grid-template-columns:1fr 1fr 1fr 150px auto}
+@media(max-width:760px){.payment-method-form{grid-template-columns:1fr 1fr}.payment-method-form label:first-child,.payment-method-form label:nth-child(3),.payment-method-form .button{grid-column:1/-1}}
