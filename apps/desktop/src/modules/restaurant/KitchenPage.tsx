@@ -25,24 +25,27 @@ export default function KitchenPage({ lang, demoMode }: { lang: AppLanguage; dem
   const [notice, setNotice] = useState('');
   useEffect(() => {
     let active = true;
-    if (demoMode) { setRecords(preview); setLoading(false); return () => { active = false; }; }
-    setLoading(true);
-    getModuleRecords('restaurant').then((items) => { if (active) setRecords(items.filter((item) => item.data.type === 'order')); })
-      .catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : t('تعذر تحميل الطلبات.','Could not load orders.')); })
-      .finally(() => { if (active) setLoading(false); });
+    const refresh = () => {
+      getModuleRecords('restaurant').then((items) => { if (active) setRecords(items.filter((item) => item.data.type === 'order')); })
+        .catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : 'Could not load orders.'); })
+        .finally(() => { if (active) setLoading(false); });
+    };
+    setLoading(true); refresh();
+    if (demoMode) {
+      window.addEventListener('storage', refresh);
+      window.addEventListener('shopnex:preview-updated', refresh);
+      const timer = window.setInterval(refresh, 2500);
+      return () => { active = false; window.clearInterval(timer); window.removeEventListener('storage', refresh); window.removeEventListener('shopnex:preview-updated', refresh); };
+    }
     return () => { active = false; };
   }, [demoMode]);
   const orders = useMemo(() => records.filter((record) => !['served', 'cancelled'].includes(text(record.data.status))), [records]);
   const update = async (record: ModuleRecord, status: string) => {
     setSaving(record.id); setError(''); setNotice('');
     try {
-      if (demoMode) {
-        setRecords((current) => current.map((item) => item.id === record.id ? { ...item, data: { ...item.data, status } } : item));
-        setNotice(t('تحديث معاينة فقط — لا يُحفظ في النظام.','Preview update only — not saved to the system.'));
-      } else {
-        const updated = await updateModuleRecord('restaurant', record.id, { ...record.data, status });
-        setRecords((current) => current.map((item) => item.id === record.id ? updated : item));
-      }
+      const updated = await updateModuleRecord('restaurant', record.id, { ...record.data, status });
+      setRecords((current) => current.map((item) => item.id === record.id ? updated : item));
+      if (demoMode) setNotice(t('حُفظ تحديث الحالة في هذا المتصفح فقط.','Status update saved in this browser only.'));
     } catch (e) { setError(e instanceof Error ? e.message : t('تعذر تحديث الطلب.','Could not update order.')); }
     finally { setSaving(null); }
   };
@@ -50,8 +53,8 @@ export default function KitchenPage({ lang, demoMode }: { lang: AppLanguage; dem
   const timeLabel = (record: ModuleRecord) => record.created_at ? new Intl.DateTimeFormat(ar ? 'ar-SA' : 'en-US', { hour: '2-digit', minute: '2-digit' }).format(new Date(record.created_at)) : t('الآن','Now');
 
   return <section className="kitchen-page">
-    <header className="kitchen-heading"><div><div className="eyebrow"><span className="eyebrow-star">✦</span>{t('التشغيل · شاشة المطبخ','OPERATIONS · KITCHEN DISPLAY')}</div><h1>{t('شاشة المطبخ','Kitchen display')}<span className="heading-period">.</span></h1><p>{t('رتّب الطلبات حسب الأولوية وحالة التحضير.','Keep tickets moving by priority and preparation status.')}</p></div><div className="kitchen-live"><i className={demoMode ? 'offline' : ''}/><span>{demoMode ? t('بيانات معاينة','PREVIEW DATA') : t('تحديث يدوي','MANUAL REFRESH')}</span><button className="icon-button" title={t('تحديث','Refresh')} onClick={() => { if (!demoMode) { setLoading(true); getModuleRecords('restaurant').then((items) => setRecords(items.filter((item) => item.data.type === 'order'))).catch((e: unknown) => setError(e instanceof Error ? e.message : 'Error')).finally(() => setLoading(false)); } }}><RefreshCw size={16}/></button></div></header>
-    {demoMode && <div className="kitchen-preview-banner"><ChefHat size={16}/>{t('هذه شاشة عرض حيّة توضيحية. الطلبات التجريبية لا تعكس نشاط مطعم حقيقي.','Live-screen preview. Sample tickets do not represent real restaurant activity.')}</div>}
+    <header className="kitchen-heading"><div><div className="eyebrow"><span className="eyebrow-star">✦</span>{t('التشغيل · شاشة المطبخ','OPERATIONS · KITCHEN DISPLAY')}</div><h1>{t('شاشة المطبخ','Kitchen display')}<span className="heading-period">.</span></h1><p>{t('رتّب الطلبات حسب الأولوية وحالة التحضير.','Keep tickets moving by priority and preparation status.')}</p></div><div className="kitchen-live"><i className={demoMode ? 'offline' : ''}/><span>{demoMode ? t('مزامنة هذا المتصفح','THIS BROWSER') : t('تحديث يدوي','MANUAL REFRESH')}</span><button className="icon-button" title={t('تحديث','Refresh')} onClick={() => { setLoading(true); getModuleRecords('restaurant').then((items) => setRecords(items.filter((item) => item.data.type === 'order'))).catch((e: unknown) => setError(e instanceof Error ? e.message : 'Error')).finally(() => setLoading(false)); }}><RefreshCw size={16}/></button></div></header>
+    {demoMode && <div className="kitchen-preview-banner"><ChefHat size={16}/>{t('الطلبات الجديدة من شاشة الضيف والكاشير تظهر هنا. السجل محفوظ بهذا المتصفح فقط، وليس نظام مطعم مباشرًا.','New guest and cashier tickets appear here. Records stay in this browser only; this is not a live restaurant system.')}</div>}
     {notice && <div className="pos-notice preview"><Check size={15}/>{notice}</div>}{error && <div className="pos-notice error">{error}</div>}
     <div className="kitchen-stat-row"><div className="kitchen-stat"><span className="metric-icon amber"><Clock3 size={17}/></span><div><small>{t('طلبات مفتوحة','OPEN TICKETS')}</small><b>{orders.length}</b></div></div><div className="kitchen-stat"><span className="metric-icon blue"><ChefHat size={17}/></span><div><small>{t('قيد التحضير','PREPARING')}</small><b>{orders.filter((order) => order.data.status === 'preparing').length}</b></div></div><div className="kitchen-stat"><span className="metric-icon teal"><Check size={17}/></span><div><small>{t('جاهز للتقديم','READY')}</small><b>{orders.filter((order) => order.data.status === 'ready').length}</b></div></div><div className="kitchen-audio"><Volume2 size={16}/><span>{t('تنبيهات الصوت غير مفعلة','Audio alerts off')}</span></div></div>
     {loading ? <div className="pos-empty">{t('جارٍ تحميل الطلبات…','Loading kitchen tickets…')}</div> : <div className="kitchen-board">{stages.map((stage) => {

@@ -154,7 +154,7 @@ export default function App() {
           {page === 'products' && <InventoryPage lang={lang} productsOnly demoMode={authMode === 'demo'}/>}
           {page === 'restaurant' && <ModuleWorkspace module="restaurant" lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'kitchen' && <KitchenPage lang={lang} demoMode={authMode === 'demo'}/>}
-          {page === 'guest' && <GuestPage lang={lang}/>}
+          {page === 'guest' && <GuestPage lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'crm' && <ModuleWorkspace module="crm" lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'hr' && <ModuleWorkspace module="hr" lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'settings' && <SettingsPage lang={lang} demoMode={authMode === 'demo'} canReset={authMode === 'authenticated' && ['super admin', 'company admin', 'admin', 'owner'].includes((profile?.role ?? '').trim().toLowerCase())} onNavigateToZatca={() => { setSensitiveUnlockFor(null); setPage('zatca'); }} />}

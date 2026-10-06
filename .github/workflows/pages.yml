@@ -1,4 +1,4 @@
-name: Deploy browser demo
+name: Deploy interactive browser preview
 
 on:
   push:
@@ -44,7 +44,7 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Build read-only browser demo
+      - name: Build browser-local interactive preview
         run: pnpm --dir apps/desktop build
         env:
           VITE_BASE_PATH: /shopnex.test/

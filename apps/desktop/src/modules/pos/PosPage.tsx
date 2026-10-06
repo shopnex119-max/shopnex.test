@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BadgePercent, Banknote, Check, CreditCard, Minus, Plus, Search, ShoppingBag, Trash2, Utensils, WalletCards } from 'lucide-react';
 import type { AppLanguage } from '../../app/types';
-import { createInvoice, getInvoiceDetails, getPhase1InvoiceQr, getProducts, type CatalogProduct } from '../../app/api';
+import { createInvoice, createModuleRecord, getInvoiceDetails, getPhase1InvoiceQr, getProducts, type CatalogProduct } from '../../app/api';
 import InvoiceReceipt, { buildDemoQrPayload, type InvoiceReceiptPayload } from '../sales/InvoiceReceipt';
 
 type Product = CatalogProduct & { tint?: string; symbol?: string };
@@ -103,7 +103,12 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
 
   useEffect(() => {
     let active = true;
-    if (demoMode) { setProducts(previewProducts); setLoading(false); return () => { active = false; }; }
+    if (demoMode) {
+      getProducts().then((items) => { if (active) setProducts(items as Product[]); })
+        .catch(() => { if (active) setProducts(previewProducts); })
+        .finally(() => { if (active) setLoading(false); });
+      return () => { active = false; };
+    }
     getProducts().then((items) => { if (active) setProducts(items); })
       .catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : t('تعذر تحميل الأصناف','Could not load products')); })
       .finally(() => { if (active) setLoading(false); });
@@ -140,33 +145,40 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
   const checkout = async () => {
     if (demoMode) {
       if (!totals.lines.length || tendered === 0n || invalidPayment || invalidDiscount) return;
-      const createdAt = new Date().toISOString();
-      const invoiceNumber = `DEMO-${createdAt.replace(/\D/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-      const amountPaid = totals.total > tendered ? tendered : totals.total;
-      const demoInvoice: InvoiceReceiptPayload = {
-        id: invoiceNumber, invoice_number: invoiceNumber, customer_name: ar ? 'عميل معاينة' : 'Demo customer',
-        invoice_type: 'simplified', status: amountPaid >= totals.total ? 'paid' : 'partially_paid',
-        subtotal: minorText(totals.subtotal), discount_total: minorText(totals.discount), taxable_subtotal: minorText(totals.taxable),
-        vat_total: minorText(totals.vat), total: minorText(totals.total), amount_paid: minorText(amountPaid),
-        change_due: minorText(change), currency: 'SAR', created_at: createdAt,
-        lines: totals.lines.map(({ product, quantity, discount: lineDiscount, taxable, vat, total }) => ({
-          id: `demo-${product.id}`, description: product.name, sku: product.sku, quantity: String(quantity),
-          unit_price: product.price, discount_percent: discount || '0', discount_amount: minorText(lineDiscount),
-          taxable_amount: minorText(taxable), vat_rate: product.vat_rate, tax_category: product.tax_category,
-          tax_reason: product.tax_reason, vat_amount: minorText(vat), total_amount: minorText(total),
-          price_includes_vat: product.price_includes_vat,
-        })),
-        payments: [
-          ...(cashMinor > 0n ? [{ id: 'demo-cash', method: 'cash', amount: minorText(cashMinor < amountPaid ? cashMinor : amountPaid), created_at: createdAt }] : []),
-          ...(cardMinor > 0n ? [{ id: 'demo-card', method: 'card', amount: minorText(cardMinor < amountPaid ? cardMinor : amountPaid), created_at: createdAt }] : []),
-        ],
-      };
-      setReceipt({
-        invoice: demoInvoice, qrBase64: buildDemoQrPayload(demoInvoice), demoMode: true,
-        qrDisclaimer: t('QR تجريبي بعلامة VAT غير حقيقية؛ لا يصلح كرمز زاتكا ولا يرسل بيانات.', 'Demo QR with a non-real VAT marker; not a ZATCA QR and no data is submitted.'),
-      });
-      setNotice(`${t('تم إنشاء معاينة فاتورة مؤقتة','Temporary invoice preview created')}: ${invoiceNumber} · ${t('الإجمالي','Total')} ${formatMoney(totals.total, ar)}`);
-      setCart({}); setDiscount('0'); setCashAmount('0'); setCardAmount('0');
+      setSaving(true); setError(''); setNotice('');
+      try {
+        const payments = [
+          ...(cashMinor > 0n ? [{ method: 'cash' as const, amount: minorText(cashMinor) }] : []),
+          ...(cardMinor > 0n ? [{ method: 'card' as const, amount: minorText(cardMinor) }] : []),
+        ];
+        const invoiceNumber = `DEMO-${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        const saved = await createInvoice({
+          invoice_number: invoiceNumber, customer_name: ar ? 'عميل معاينة' : 'Preview customer', invoice_type: 'simplified',
+          lines: totals.lines.map(({ product, quantity }) => ({ product_id: product.id, quantity: String(quantity), discount_percent: discount || '0' })),
+          payments,
+        });
+        const detail = await getInvoiceDetails(saved.id);
+        const kitchenItems = totals.lines.filter(({ product }) => ['وجبات', 'مشروبات', 'إضافات', 'حلويات'].includes(product.category));
+        let kitchenNote = '';
+        if (kitchenItems.length) {
+          try {
+            const ticket = await createModuleRecord('restaurant', {
+              type: 'order', name: `طلب ${saved.invoice_number}`, location: 'الكاشير · استلام', amount: saved.total,
+              status: 'new', priority: 'normal', source: 'cashier-preview',
+              items: kitchenItems.map(({ product, quantity }) => ({ name: product.name, quantity, note: '' })),
+            });
+            kitchenNote = ` · ${t('تذكرة المطبخ','Kitchen ticket')} ${String(ticket.data.name ?? '')}`;
+          } catch { kitchenNote = ` · ${t('تعذر إنشاء تذكرة المطبخ','Kitchen ticket could not be saved')}`; }
+        }
+        setReceipt({
+          invoice: detail, qrBase64: buildDemoQrPayload(detail), demoMode: true,
+          qrDisclaimer: t('QR توضيحي فقط، لا يمثل رمز زاتكا ولا يُرسل أي بيانات للهيئة.', 'Illustrative QR only; not a ZATCA QR and no data is sent to the authority.'),
+        });
+        setNotice(`${t('حُفظت فاتورة المعاينة في هذا المتصفح فقط','Preview invoice saved in this browser only')}: ${saved.invoice_number} · ${formatMoney(scaled(saved.total), ar)}${change > 0n ? ` · ${t('الباقي','Change')} ${formatMoney(scaled(saved.change_due), ar)}` : ''}${kitchenNote}`);
+        setCart({}); setDiscount('0'); setCashAmount('0'); setCardAmount('0');
+        void getProducts().then((items) => setProducts(items as Product[])).catch(() => undefined);
+      } catch (e) { setError(e instanceof Error ? e.message : t('تعذر حفظ فاتورة المعاينة.','Could not save the preview invoice.')); }
+      finally { setSaving(false); }
       return;
     }
     if (totals.lines.length === 0 || tendered === 0n || invalidPayment || invalidDiscount) return;
@@ -211,9 +223,9 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
   return <section className="pos-page">
     <header className="pos-heading">
       <div><div className="eyebrow"><span className="eyebrow-star">✦</span>{t('التشغيل · نقطة البيع','OPERATIONS · CASHIER')}</div><h1>{t('نقطة البيع','Point of sale')}<span className="heading-period">.</span></h1><p>{t('أضف الأصناف، راجع الضريبة، وسجّل المدفوعات في تدفق واحد.','Build the basket, verify tax, and record tender in one fast flow.')}</p></div>
-      <div className="pos-session"><span className={`status-pulse ${demoMode ? 'pulse-amber' : ''}`}/><div><b>{t('الكاشير · الرياض','Cashier · Riyadh')}</b><small>{demoMode ? t('وضع معاينة غير محفوظ','Preview · not saved') : t('جلسة محلية','Local session')}</small></div></div>
+      <div className="pos-session"><span className={`status-pulse ${demoMode ? 'pulse-amber' : ''}`}/><div><b>{t('الكاشير · الرياض','Cashier · Riyadh')}</b><small>{demoMode ? t('معاينة محفوظة بهذا المتصفح','Saved in this browser') : t('جلسة محلية','Local session')}</small></div></div>
     </header>
-    {demoMode && <div className="pos-notice preview"><ShoppingBag size={16}/><span>{t('أصناف توضيحية للتجربة. لا تُحفظ المبيعات في وضع المعاينة.','Sample products for preview. Sales are not persisted in preview mode.')}</span></div>}
+    {demoMode && <div className="pos-notice preview"><ShoppingBag size={16}/><span>{t('يمكنك تجربة البيع؛ تحفظ الفواتير والمخزون في هذا المتصفح فقط. لا تُرسل مبيعات حقيقية أو بيانات إلى زاتكا.','Try a sale: invoices and stock are saved in this browser only. No real sales or data are sent to ZATCA.')}</span></div>}
     {notice && <div className="pos-notice success"><Check size={16}/><span>{notice}</span></div>}
     {error && <div className="pos-notice error"><span>{error}</span></div>}
     <div className="pos-layout">

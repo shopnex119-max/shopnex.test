@@ -66,7 +66,10 @@ export default function OperationsPage({ lang, mode, demoMode }: { lang: AppLang
   useEffect(() => {
     let active = true;
     if (demoMode) {
-      setRecords(demoRecords); setLoading(false);
+      setLoading(true);
+      getInvoices().then((items) => { if (active) setRecords([...items.map((invoice) => toRecord(invoice, lang)), ...demoRecords]); })
+        .catch(() => { if (active) setRecords(demoRecords); })
+        .finally(() => { if (active) setLoading(false); });
       return () => { active = false; };
     }
     if (mode === 'invoices') {
@@ -94,7 +97,7 @@ export default function OperationsPage({ lang, mode, demoMode }: { lang: AppLang
 
   const openInvoice = async (record: InvoiceRecord) => {
     setError(''); setOpeningId(record.id);
-    if (demoMode || !record.invoiceId) {
+    if (!record.invoiceId) {
       const invoice = demoSummaryInvoice(record, lang);
       setReceipt({
         invoice, qrBase64: buildDemoQrPayload(invoice), demoMode: true,
@@ -106,14 +109,19 @@ export default function OperationsPage({ lang, mode, demoMode }: { lang: AppLang
     try {
       const detail: InvoiceDetail = await getInvoiceDetails(record.invoiceId);
       let qrBase64: string | null = null;
-      let qrDisclaimer = t('أدخل اسم المنشأة ورقم VAT في إعدادات زاتكا لإظهار QR المحلي.', 'Set the legal seller name and VAT number in ZATCA settings to show the local QR.');
+      let qrDisclaimer = demoMode
+        ? t('QR توضيحي فقط؛ لا يمثل رمز زاتكا أو فاتورة مرسلة للهيئة.','Illustrative QR only; not a ZATCA QR or a submitted invoice.')
+        : t('أدخل الاسم النظامي ورقم VAT في إعدادات زاتكا لإظهار QR المحلي.', 'Set the legal seller name and VAT number in ZATCA settings to show the local QR.');
       let sellerName: string | undefined;
       let vatNumber: string | undefined;
-      try {
-        const qr = await getPhase1InvoiceQr(detail.id);
-        qrBase64 = qr.qr_base64; qrDisclaimer = qr.disclaimer; sellerName = qr.seller_name; vatNumber = qr.vat_number;
-      } catch { /* Invoice viewing and printing do not depend on QR setup. */ }
-      setReceipt({ invoice: detail, qrBase64, qrDisclaimer, sellerName, vatNumber, demoMode: false });
+      if (demoMode) qrBase64 = buildDemoQrPayload(detail);
+      else {
+        try {
+          const qr = await getPhase1InvoiceQr(detail.id);
+          qrBase64 = qr.qr_base64; qrDisclaimer = qr.disclaimer; sellerName = qr.seller_name; vatNumber = qr.vat_number;
+        } catch { /* Invoice viewing and printing do not depend on QR setup. */ }
+      }
+      setReceipt({ invoice: detail, qrBase64, qrDisclaimer, sellerName, vatNumber, demoMode });
     } catch (e) {
       setError(e instanceof Error ? e.message : t('تعذر تحميل تفاصيل الفاتورة.', 'Could not load invoice details.'));
     } finally { setOpeningId(''); }
@@ -121,7 +129,7 @@ export default function OperationsPage({ lang, mode, demoMode }: { lang: AppLang
 
   return <section className="operations-page">
     <div className="page-heading-row">
-      <div><div className="eyebrow"><span className="eyebrow-star">✦</span>{t('مساحة العمل · العمليات', 'WORKSPACE · OPERATIONS')}</div><h1>{title}<span className="heading-period">.</span></h1><p>{t('سجل فواتير محفوظة محليًا أو بيانات معاينة واضحة.', 'Local invoice register, or clearly marked preview data.')}</p></div>
+      <div><div className="eyebrow"><span className="eyebrow-star">✦</span>{t('مساحة العمل · العمليات', 'WORKSPACE · OPERATIONS')}</div><h1>{title}<span className="heading-period">.</span></h1><p>{demoMode ? t('يعرض فواتير المثال ومبيعات هذا المتصفح فقط.','Sample invoices and this browser’s sales only.') : t('سجل فواتير محفوظة محليًا أو بيانات معاينة واضحة.', 'Local invoice register, or clearly marked preview data.')}</p></div>
       <div className="heading-actions"><span className={`demo-pill ${demoMode ? '' : 'module-live-pill'}`}><i/>{demoMode ? t('بيانات معاينة', 'PREVIEW DATA') : t('بيانات محلية', 'LOCAL DATA')}</span><button className="button button-primary" onClick={() => setNotice(true)}><Plus size={15}/>{pos ? t('بيع جديد', 'New sale') : purchasing ? t('طلب شراء', 'New purchase') : t('فاتورة جديدة', 'New invoice')}</button></div>
     </div>
     {notice && <div className="inline-alert warning"><span><ShoppingBag size={16}/></span>{t('ابدأ البيع من شاشة الكاشير. لا ينشئ هذا الزر فاتورة غير مكتملة.', 'Open the cashier screen to record sales; this button does not create an empty invoice.')}<button className="icon-button" onClick={() => setNotice(false)}><ArrowDownLeft size={15}/></button></div>}
