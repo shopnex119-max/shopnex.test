@@ -2,8 +2,18 @@ import { ArrowDownLeft, ArrowUpLeft, ArrowUpRight, BookOpenCheck, Boxes, CircleA
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { AppLanguage, PageKey } from '../../app/types';
 
-const salesSeries = [{ day: 'السبت', actual: 0, previous: 0 }, { day: 'الأحد', actual: 0, previous: 0 }, { day: 'الإثنين', actual: 0, previous: 0 }, { day: 'الثلاثاء', actual: 0, previous: 0 }, { day: 'الأربعاء', actual: 0, previous: 0 }, { day: 'الخميس', actual: 0, previous: 0 }, { day: 'الجمعة', actual: 0, previous: 0 }];
-const recent: { id: string; customer: string; time: string; amount: string; status: string; color: string }[] = [];
+const salesSeries = [
+  { day: 'السبت', actual: 14, previous: 9 }, { day: 'الأحد', actual: 18, previous: 13 },
+  { day: 'الإثنين', actual: 13, previous: 15 }, { day: 'الثلاثاء', actual: 24, previous: 17 },
+  { day: 'الأربعاء', actual: 19, previous: 16 }, { day: 'الخميس', actual: 28, previous: 21 },
+  { day: 'الجمعة', actual: 23, previous: 18 },
+];
+const recent = [
+  { id: 'INV-2048', customer: 'مؤسسة الندى التجارية', time: '10:42 ص', amount: '2,875.00', status: 'مدفوعة', color: 'green' },
+  { id: 'INV-2047', customer: 'شركة مدار التقنية', time: '10:18 ص', amount: '1,240.50', status: 'بانتظار الإرسال', color: 'amber' },
+  { id: 'INV-2046', customer: 'عميل نقدي', time: '09:56 ص', amount: '386.00', status: 'مدفوعة', color: 'green' },
+  { id: 'INV-2045', customer: 'روائع المنزل', time: '09:34 ص', amount: '5,100.00', status: 'مسودة', color: 'slate' },
+];
 
 function Metric({ icon: Icon, label, value, change, positive, tint }: { icon: typeof FileText; label: string; value: string; change: string; positive?: boolean; tint: string }) {
   return <article className="metric-card glass-card">
@@ -22,15 +32,15 @@ export default function Dashboard({ lang, onNavigate }: { lang: AppLanguage; onN
       <div className="heading-actions"><span className="demo-pill"><i/> {t('بيانات تجريبية للعرض','DEMO DATA')}</span><button className="button button-primary" onClick={() => onNavigate('sales')}><Plus size={16}/>{t('عملية جديدة','New transaction')}</button></div>
     </div>
     <div className="metrics-grid">
-      <Metric icon={ShoppingBag} label={t('إجمالي المبيعات','Gross sales')} value="0" change="0%" positive tint="teal"/>
-      <Metric icon={WalletCards} label={t('صافي الربح','Net profit')} value="0" change="0%" positive tint="violet"/>
-      <Metric icon={FileText} label={t('الفواتير الصادرة','Invoices issued')} value="0" change="0" positive tint="blue"/>
+      <Metric icon={ShoppingBag} label={t('إجمالي المبيعات','Gross sales')} value="24,680" change="12.8%" positive tint="teal"/>
+      <Metric icon={WalletCards} label={t('صافي الربح','Net profit')} value="8,420" change="8.4%" positive tint="violet"/>
+      <Metric icon={FileText} label={t('الفواتير الصادرة','Invoices issued')} value="148" change="6.2%" positive tint="blue"/>
       <Metric icon={Boxes} label={t('أصناف منخفضة المخزون','Low stock items')} value="07" change="2 أصناف" tint="amber"/>
     </div>
     <div className="dashboard-main-grid">
       <article className="panel sales-chart-panel">
         <div className="panel-heading"><div><span className="eyebrow">{t('حركة المبيعات','SALES ACTIVITY')}</span><h2>{t('إيقاع الأسبوع','Weekly pulse')}</h2></div><button className="select-button">{t('آخر ٧ أيام','Last 7 days')} <span>⌄</span></button></div>
-        <div className="chart-legend"><span><i className="legend-dot legend-current"/>{t('هذا الأسبوع','This week')}</span><span><i className="legend-dot legend-previous"/>{t('الأسبوع السابق','Previous week')}</span><strong>٠ ر.س <small>٠٪</small></strong></div>
+        <div className="chart-legend"><span><i className="legend-dot legend-current"/>{t('هذا الأسبوع','This week')}</span><span><i className="legend-dot legend-previous"/>{t('الأسبوع السابق','Previous week')}</span><strong>١٦٨٬٤٥٠ ر.س <small><ArrowUpRight size={13}/> ١٢٫٨٪</small></strong></div>
         <div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><AreaChart data={salesSeries} margin={{ top: 16, right: 4, left: 0, bottom: 0 }}>
           <defs><linearGradient id="salesGlow" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#42dfc7" stopOpacity={0.23}/><stop offset="92%" stopColor="#42dfc7" stopOpacity={0}/></linearGradient></defs>
           <CartesianGrid vertical={false} stroke="rgba(173,194,228,.09)" strokeDasharray="3 5"/>
@@ -45,7 +55,7 @@ export default function Dashboard({ lang, onNavigate }: { lang: AppLanguage; onN
       <article className="panel branch-panel">
         <div className="panel-heading"><div><span className="eyebrow">{t('الأداء حسب الفرع','BY LOCATION')}</span><h2>{t('مدارات الفروع','Branch orbit')}</h2></div><button className="more-button" aria-label="more">•••</button></div>
         <div className="branch-orbit-wrap"><div className="branch-orbit"><span className="orbit-ring ring-one"/><span className="orbit-ring ring-two"/><span className="orbit-center"><BuildingIcon/></span><span className="orbit-node node-north"/><span className="orbit-node node-east"/><span className="orbit-node node-west"/><span className="orbit-node node-south"/></div><div className="orbit-caption"><strong>٤</strong><span>{t('فروع نشطة','ACTIVE BRANCHES')}</span></div></div>
-        <div className="branch-list"><Branch name="الرياض — العليا" amount="0" share="0%" width="0%" color="aqua"/><Branch name="جدة — الروضة" amount="0" share="0%" width="0%" color="blue"/><Branch name="الدمام — الشاطئ" amount="0" share="0%" width="0%" color="violet"/><Branch name="الخبر — المركز" amount="0" share="0%" width="0%" color="amber"/></div>
+        <div className="branch-list"><Branch name="الرياض — العليا" amount="12,480" share="51%" width="51%" color="aqua"/><Branch name="جدة — الروضة" amount="6,240" share="25%" width="25%" color="blue"/><Branch name="الدمام — الشاطئ" amount="3,920" share="16%" width="16%" color="violet"/><Branch name="الخبر — المركز" amount="2,040" share="8%" width="8%" color="amber"/></div>
       </article>
     </div>
     <div className="dashboard-lower-grid">

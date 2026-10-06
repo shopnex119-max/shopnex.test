@@ -7,33 +7,36 @@ import { formatValue, parseMinor, toDecimalString } from '../../app/finance';
 type Props = { lang: AppLanguage; demoMode: boolean };
 type Tab = 'trial' | 'journals' | 'balances' | 'tax';
 const demoAccounts: TrialBalanceRow[] = [
-  ['1000','cash','الصندوق','Cash','asset','debit','0.00','0.00'],
-  ['1010','bank','البنك / شبكة','Bank / card clearing','asset','debit','0.00','0.00'],
-  ['1100','receivable','العملاء المدينون','Accounts receivable','asset','debit','0.00','0.00'],
-  ['1200','inventory','المخزون','Inventory','asset','debit','0.00','0.00'],
-  ['2100','payable','الموردون الدائنون','Accounts payable','liability','credit','0.00','0.00'],
-  ['2200','vat_output','ضريبة مخرجات مستحقة','VAT payable','liability','credit','0.00','0.00'],
-  ['2210','vat_input','ضريبة مدخلات قابلة للاسترداد','Input VAT','asset','debit','0.00','0.00'],
-  ['3000','equity','رأس المال / حقوق الملكية','Owner equity','equity','credit','0.00','0.00'],
-  ['4000','sales','إيرادات المبيعات','Sales revenue','revenue','credit','0.00','0.00'],
-  ['5000','cogs','تكلفة البضاعة المباعة','Cost of goods sold','expense','debit','0.00','0.00'],
-  ['6100','operating_expense','مصروفات تشغيلية','Operating expenses','expense','debit','0.00','0.00'],
+  ['1000','cash','الصندوق','Cash','asset','debit','12500.00','0.00'],
+  ['1010','bank','البنك / شبكة','Bank / card clearing','asset','debit','8600.00','0.00'],
+  ['1100','receivable','العملاء المدينون','Accounts receivable','asset','debit','4000.00','0.00'],
+  ['1200','inventory','المخزون','Inventory','asset','debit','12000.00','0.00'],
+  ['2100','payable','الموردون الدائنون','Accounts payable','liability','credit','0.00','2500.00'],
+  ['2200','vat_output','ضريبة مخرجات مستحقة','VAT payable','liability','credit','0.00','760.00'],
+  ['2210','vat_input','ضريبة مدخلات قابلة للاسترداد','Input VAT','asset','debit','320.00','0.00'],
+  ['3000','equity','رأس المال / حقوق الملكية','Owner equity','equity','credit','0.00','15000.00'],
+  ['4000','sales','إيرادات المبيعات','Sales revenue','revenue','credit','0.00','32760.00'],
+  ['5000','cogs','تكلفة البضاعة المباعة','Cost of goods sold','expense','debit','9500.00','0.00'],
+  ['6100','operating_expense','مصروفات تشغيلية','Operating expenses','expense','debit','4100.00','0.00'],
 ].map(([code,system_key,name_ar,name_en,account_type,normal_side,debit_total,credit_total], index) => ({ id: `demo-account-${index}`, code: String(code), system_key: String(system_key), name_ar: String(name_ar), name_en: String(name_en), account_type: String(account_type), normal_side: String(normal_side), debit_total, credit_total, balance: toDecimalString(normal_side === 'debit' ? parseMinor(debit_total) - parseMinor(credit_total) : parseMinor(credit_total) - parseMinor(debit_total)) }));
-const demoJournals: any[] = [];
+const demoJournals = [
+  { id:'demo-je-1', entry_number:'JE-DEMO-001', source_type:'sale', description:'فاتورة بيع INV-DEMO-01', created_at:'2026-10-05T11:10:00Z', lines:[{account_code:'1000',account_ar:'الصندوق',account_en:'Cash',memo:'مقبوضات نقدية',debit:'115.00',credit:'0.00'},{account_code:'4000',account_ar:'إيرادات المبيعات',account_en:'Sales revenue',memo:'بيع',debit:'0.00',credit:'100.00'},{account_code:'2200',account_ar:'ضريبة مخرجات مستحقة',account_en:'VAT payable',memo:'ضريبة',debit:'0.00',credit:'15.00'}] },
+  { id:'demo-je-2', entry_number:'JE-DEMO-002', source_type:'purchase', description:'فاتورة مشتريات PUR-DEMO-01', created_at:'2026-10-05T10:30:00Z', lines:[{account_code:'1200',account_ar:'المخزون',account_en:'Inventory',memo:'مخزون',debit:'100.00',credit:'0.00'},{account_code:'2210',account_ar:'ضريبة مدخلات قابلة للاسترداد',account_en:'Input VAT',memo:'ضريبة',debit:'15.00',credit:'0.00'},{account_code:'2100',account_ar:'الموردون الدائنون',account_en:'Accounts payable',memo:'مورد',debit:'0.00',credit:'115.00'}] },
+];
 const demoRules = [
   { id:'r1',code:'SHOPNEX-STD-15',version:1,name_ar:'ضريبة قياسية',name_en:'Standard VAT',category:'standard',rate:'15.00',effective_from:'2020-07-01',effective_to:null,reason_required:false,code_scope:'internal_shopnex_code_not_zatca_code' },
   { id:'r2',code:'SHOPNEX-ZERO',version:1,name_ar:'نسبة صفرية',name_en:'Zero-rated',category:'zero_rated',rate:'0.00',effective_from:'2020-07-01',effective_to:null,reason_required:false,code_scope:'internal_shopnex_code_not_zatca_code' },
 ];
-const demoReceivables: any[] = [];
-const demoPayables: any[] = [];
+const demoReceivables = [{ invoice_number:'INV-DEMO-07',customer:'عميل تجريبي',days_open:18,age_bucket:'0-30',total:'575.00',paid:'200.00',balance_due:'375.00' }];
+const demoPayables = [{ purchase_number:'PUR-DEMO-03',supplier:'مورد تجريبي',days_overdue:4,age_bucket:'0-30',total:'230.00',paid:'0.00',balance_due:'230.00' }];
 
 export default function AccountingPage({ lang, demoMode }: Props) {
   const ar = lang === 'ar';
   const t = (a: string, e: string) => ar ? a : e;
   const [tab, setTab] = useState<Tab>('trial');
   const [accounts, setAccounts] = useState<TrialBalanceRow[]>(demoMode ? demoAccounts : []);
-  const [debitTotal, setDebitTotal] = useState<string | number>('0.00');
-  const [creditTotal, setCreditTotal] = useState<string | number>('0.00');
+  const [debitTotal, setDebitTotal] = useState<string | number>('51020.00');
+  const [creditTotal, setCreditTotal] = useState<string | number>('51020.00');
   const [balanced, setBalanced] = useState(true);
   const [journals, setJournals] = useState<any[]>(demoMode ? demoJournals : []);
   const [receivables, setReceivables] = useState<any[]>(demoMode ? demoReceivables : []);

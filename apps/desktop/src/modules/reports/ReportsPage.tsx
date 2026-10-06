@@ -10,11 +10,14 @@ const today = () => new Date().toISOString().slice(0, 10);
 const daysAgo = (days: number) => { const day = new Date(); day.setDate(day.getDate() - days); return day.toISOString().slice(0, 10); };
 const preview: FinanceReport = {
   period: { start_date: daysAgo(30), end_date: today(), timezone: 'UTC' }, currency: 'SAR',
-  sales: { count: 0, total: '0.00', net: '0.00', vat: '0.00', paid: '0.00', receivables: '0.00' },
-  purchases: { count: 0, total: '0.00', net: '0.00', vat: '0.00', paid: '0.00', payables: '0.00' },
-  tax: { output_vat: '0.00', input_vat: '0.00', net_vat_due_estimate: '0.00', filing_status: 'report_only_not_filed' },
-  profitability: { net_sales_before_vat: '0.00', cost_of_goods_sold: '0.00', gross_profit_estimate: '0.00', inventory_value_at_average_cost: '0.00', items_with_missing_cost: 0 },
-  payments_by_method: [], sales_trend: [], top_products: [], supplier_performance: [],
+  sales: { count: 184, total: '68420.50', net: '59496.09', vat: '8924.41', paid: '61100.00', receivables: '7320.50' },
+  purchases: { count: 36, total: '28115.00', net: '24447.83', vat: '3667.17', paid: '23400.00', payables: '4715.00' },
+  tax: { output_vat: '8924.41', input_vat: '3667.17', net_vat_due_estimate: '5257.24', filing_status: 'report_only_not_filed' },
+  profitability: { net_sales_before_vat: '59496.09', cost_of_goods_sold: '31900.00', gross_profit_estimate: '27596.09', inventory_value_at_average_cost: '118420.00', items_with_missing_cost: 2 },
+  payments_by_method: [{ method: 'cash', amount: '25200.00' }, { method: 'card', amount: '32700.00' }],
+  sales_trend: Array.from({ length: 10 }, (_, index) => ({ date: new Date(Date.now() - (9 - index) * 86400000).toISOString().slice(0, 10), sales: String(4000 + ((index * 739) % 2700)) })),
+  top_products: [{ sku: 'SKU-101', name: 'قهوة مختصة', quantity: '342.000', net_sales: '14364.00', vat: '2154.60', cost: '7866.00', gross_profit: '6498.00' }, { sku: 'SKU-102', name: 'أكواب ورقية', quantity: '308.000', net_sales: '3696.00', vat: '554.40', cost: '1540.00', gross_profit: '2156.00' }],
+  supplier_performance: [{ supplier: 'شركة الإمداد التجاري', count: 16, purchases: '12800.00', paid: '10400.00', balance: '2400.00' }, { supplier: 'مؤسسة مخازن الرياض', count: 9, purchases: '7200.00', paid: '6100.00', balance: '1100.00' }],
   data_scope: 'preview_only',
 };
 
