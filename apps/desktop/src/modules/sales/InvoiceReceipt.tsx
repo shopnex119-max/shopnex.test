@@ -6,6 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import './invoice-print.css';
 import type { AppLanguage } from '../../app/types';
 import type { InvoiceDetail } from '../../app/api';
+import { paymentLabel } from '../../app/paymentMethods';
 
 export interface InvoiceReceiptPayload extends InvoiceDetail {}
 
@@ -82,10 +83,12 @@ export default function InvoiceReceipt({
   const dateText = new Intl.DateTimeFormat(ar ? 'ar-SA-u-ca-gregory' : 'en-GB', {
     dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Riyadh',
   }).format(new Date(invoice.created_at));
-  const paymentName = (method: string) => ({
-    cash: t('نقدًا', 'Cash'), card: t('بطاقة', 'Card'), bank_transfer: t('تحويل بنكي', 'Bank transfer'),
-    wallet: t('محفظة', 'Wallet'), other: t('أخرى', 'Other'),
-  } as Record<string, string>)[method] ?? method;
+  const paymentName = (method: string) => paymentLabel(method, ar);
+  const invoiceTypeName = invoice.invoice_type === 'tax'
+    ? t('فاتورة ضريبية', 'Tax invoice')
+    : invoice.invoice_type === 'simplified'
+      ? t('فاتورة مبسطة / غير ضريبية', 'Simplified / non-tax invoice')
+      : invoice.invoice_type;
 
   return createPortal(<div className="invoice-print-overlay" onMouseDown={onClose}>
     <section className="invoice-print-modal" role="dialog" aria-modal="true" aria-label={t('معاينة وطباعة الفاتورة', 'Invoice preview and print')} onMouseDown={(event) => event.stopPropagation()}>
@@ -105,7 +108,7 @@ export default function InvoiceReceipt({
 
         <div className="receipt-title-row">
           <div><span className="eyebrow">{t('رقم الفاتورة', 'INVOICE NUMBER')}</span><h1>{invoice.invoice_number}</h1></div>
-          <span className="receipt-invoice-type">{invoice.invoice_type === 'simplified' ? t('فاتورة ضريبية مبسطة', 'Simplified tax invoice') : invoice.invoice_type}</span>
+          <span className="receipt-invoice-type">{invoiceTypeName}</span>
         </div>
         <div className="receipt-meta-grid">
           <div><span>{t('التاريخ والوقت', 'Date & time')}</span><b>{dateText}</b></div>

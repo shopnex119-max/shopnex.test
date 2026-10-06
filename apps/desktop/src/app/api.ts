@@ -105,9 +105,9 @@ export async function createProduct(input: CreateProductInput) {
 export interface CreateInvoiceInput {
   invoice_number: string;
   customer_name: string;
-  invoice_type: 'simplified';
+  invoice_type: 'simplified' | 'tax';
   lines: { product_id: string; quantity: string; discount_percent: string }[];
-  payments: { method: 'cash' | 'card' | 'bank_transfer' | 'wallet' | 'other'; amount: string }[];
+  payments: { method: string; amount: string }[];
 }
 
 export interface SavedInvoice {

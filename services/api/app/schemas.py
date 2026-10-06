@@ -72,7 +72,7 @@ class InvoiceLineInput(BaseModel):
 
 
 class InvoicePaymentInput(BaseModel):
-    method: str = Field(pattern="^(cash|card|bank_transfer|wallet|other)$")
+    method: str = Field(pattern="^(cash|card|bank_transfer|wallet|other|custom_[a-z0-9_]{1,100})$")
     amount: Decimal = Field(gt=0, max_digits=14, decimal_places=2)
 
 
@@ -158,7 +158,7 @@ class PurchaseLineInput(BaseModel):
 
 
 class PurchasePaymentInput(BaseModel):
-    method: str = Field(pattern="^(cash|card|bank_transfer|wallet|other)$")
+    method: str = Field(pattern="^(cash|card|bank_transfer|wallet|other|custom_[a-z0-9_]{1,100})$")
     amount: Decimal = Field(gt=0, max_digits=14, decimal_places=2)
 
 
@@ -172,7 +172,7 @@ class PurchaseInput(BaseModel):
 
 
 class PurchasePaymentAddInput(BaseModel):
-    method: str = Field(pattern="^(cash|card|bank_transfer|wallet|other)$")
+    method: str = Field(pattern="^(cash|card|bank_transfer|wallet|other|custom_[a-z0-9_]{1,100})$")
     amount: Decimal = Field(gt=0, max_digits=14, decimal_places=2)
     idempotency_key: str = Field(min_length=8, max_length=120)
 

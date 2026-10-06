@@ -3,6 +3,7 @@ import { BadgePercent, Banknote, Check, CreditCard, Minus, Plus, Search, Shoppin
 import type { AppLanguage } from '../../app/types';
 import { createInvoice, createModuleRecord, getInvoiceDetails, getPhase1InvoiceQr, getProducts, type CatalogProduct } from '../../app/api';
 import InvoiceReceipt, { buildDemoQrPayload, type InvoiceReceiptPayload } from '../sales/InvoiceReceipt';
+import { loadPaymentMethods, type PaymentMethod } from '../../app/paymentMethods';
 
 type Product = CatalogProduct & { tint?: string; symbol?: string };
 type Cart = Record<string, number>;
@@ -95,6 +96,10 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
   const [discount, setDiscount] = useState('0');
   const [cashAmount, setCashAmount] = useState('0');
   const [cardAmount, setCardAmount] = useState('0');
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(loadPaymentMethods);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+  const [customAmount, setCustomAmount] = useState('0');
+  const [invoiceType, setInvoiceType] = useState<'simplified' | 'tax'>('simplified');
   const [loading, setLoading] = useState(!demoMode);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -114,6 +119,16 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [demoMode]);
+  useEffect(() => {
+    const refresh = () => setPaymentMethods(loadPaymentMethods());
+    window.addEventListener('shopnex-payment-methods-changed', refresh);
+    refresh();
+    return () => window.removeEventListener('shopnex-payment-methods-changed', refresh);
+  }, []);
+  useEffect(() => {
+    const custom = paymentMethods.find((method) => !['cash', 'card'].includes(method.code));
+    if (custom && !selectedPaymentMethod) setSelectedPaymentMethod(custom.code);
+  }, [paymentMethods, selectedPaymentMethod]);
 
   const categoriesToShow = useMemo(() => ['الكل', ...new Set(products.map((product) => product.category))], [products]);
   const visibleProducts = useMemo(() => products.filter((product) => {
@@ -124,12 +139,14 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
   const totals = useMemo(() => calculateCart(products, cart, discount), [products, cart, discount]);
   const cashMinor = scaled(cashAmount || '0');
   const cardMinor = scaled(cardAmount || '0');
-  const tendered = cashMinor + cardMinor;
+  const customMinor = scaled(customAmount || '0');
+  const selectedCustomMethod = paymentMethods.find((method) => method.code === selectedPaymentMethod && !['cash', 'card'].includes(method.code));
+  const tendered = cashMinor + cardMinor + customMinor;
   const discountMinor = scaled(discount || '0');
   const invalidDiscount = discountMinor < 0n || discountMinor > 10000n;
   const due = totals.total > tendered ? totals.total - tendered : 0n;
   const change = tendered > totals.total ? tendered - totals.total : 0n;
-  const invalidPayment = change > 0n && cardMinor > 0n;
+  const invalidPayment = change > 0n && (cardMinor > 0n || (customMinor > 0n && selectedCustomMethod?.kind !== 'cash'));
 
   const changeQuantity = (product: Product, delta: number) => {
     setNotice('');
@@ -150,11 +167,12 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
         const payments = [
           ...(cashMinor > 0n ? [{ method: 'cash' as const, amount: minorText(cashMinor) }] : []),
           ...(cardMinor > 0n ? [{ method: 'card' as const, amount: minorText(cardMinor) }] : []),
+          ...(selectedCustomMethod && customMinor > 0n ? [{ method: selectedCustomMethod.code, amount: minorText(customMinor) }] : []),
         ];
         const invoiceNumber = `DEMO-${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
         const saved = await createInvoice({
-          invoice_number: invoiceNumber, customer_name: ar ? 'عميل معاينة' : 'Preview customer', invoice_type: 'simplified',
-          lines: totals.lines.map(({ product, quantity }) => ({ product_id: product.id, quantity: String(quantity), discount_percent: discount || '0' })),
+          invoice_number: invoiceNumber, customer_name: ar ? 'عميل معاينة' : 'Preview customer',
+          lines: totals.lines.map(({ product, quantity }) => ({ product_id: product.id, quantity: String(quantity), discount_percent: discount || '0' })), invoice_type: invoiceType,
           payments,
         });
         const detail = await getInvoiceDetails(saved.id);
@@ -175,7 +193,7 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
           qrDisclaimer: t('QR توضيحي فقط، لا يمثل رمز زاتكا ولا يُرسل أي بيانات للهيئة.', 'Illustrative QR only; not a ZATCA QR and no data is sent to the authority.'),
         });
         setNotice(`${t('حُفظت فاتورة المعاينة في هذا المتصفح فقط','Preview invoice saved in this browser only')}: ${saved.invoice_number} · ${formatMoney(scaled(saved.total), ar)}${change > 0n ? ` · ${t('الباقي','Change')} ${formatMoney(scaled(saved.change_due), ar)}` : ''}${kitchenNote}`);
-        setCart({}); setDiscount('0'); setCashAmount('0'); setCardAmount('0');
+        setCart({}); setDiscount('0'); setCashAmount('0'); setCardAmount('0'); setCustomAmount('0'); setInvoiceType('simplified');
         void getProducts().then((items) => setProducts(items as Product[])).catch(() => undefined);
       } catch (e) { setError(e instanceof Error ? e.message : t('تعذر حفظ فاتورة المعاينة.','Could not save the preview invoice.')); }
       finally { setSaving(false); }
@@ -187,16 +205,17 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
       const payments = [
         ...(cashMinor > 0n ? [{ method: 'cash' as const, amount: minorText(cashMinor) }] : []),
         ...(cardMinor > 0n ? [{ method: 'card' as const, amount: minorText(cardMinor) }] : []),
+        ...(selectedCustomMethod && customMinor > 0n ? [{ method: selectedCustomMethod.code, amount: minorText(customMinor) }] : []),
       ];
       const saved = await createInvoice({
         invoice_number: `POS-${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
         customer_name: ar ? 'عميل نقدي' : 'Walk-in customer',
-        invoice_type: 'simplified',
+        invoice_type: invoiceType,
         lines: totals.lines.map(({ product, quantity }) => ({ product_id: product.id, quantity: String(quantity), discount_percent: discount || '0' })),
         payments,
       });
       setNotice(`${t('تم حفظ الفاتورة','Invoice saved')}: ${saved.invoice_number} · ${t('الإجمالي','Total')} ${formatMoney(scaled(saved.total), ar)}${change > 0n ? ` · ${t('الباقي','Change')} ${formatMoney(scaled(saved.change_due), ar)}` : ''}`);
-      setCart({}); setDiscount('0'); setCashAmount('0'); setCardAmount('0');
+      setCart({}); setDiscount('0'); setCashAmount('0'); setCardAmount('0'); setCustomAmount('0'); setInvoiceType('simplified');
       void getProducts().then(setProducts).catch(() => undefined);
       try {
         const detail = await getInvoiceDetails(saved.id);
@@ -218,7 +237,8 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
   };
 
   const useCashForRemaining = () => { setCashAmount(minorText(totals.total > cardMinor ? totals.total - cardMinor : 0n)); };
-  const useCardForRemaining = () => { setCardAmount(minorText(totals.total > cashMinor ? totals.total - cashMinor : 0n)); };
+  const useCardForRemaining = () => { setCardAmount(minorText(totals.total > cashMinor + customMinor ? totals.total - cashMinor - customMinor : 0n)); };
+  const useCustomForRemaining = () => { setCustomAmount(minorText(totals.total > cashMinor + cardMinor ? totals.total - cashMinor - cardMinor : 0n)); };
 
   return <section className="pos-page">
     <header className="pos-heading">
@@ -249,8 +269,11 @@ export default function PosPage({ lang, demoMode }: { lang: AppLanguage; demoMod
         <div className="pos-discount-field"><label htmlFor="pos-discount"><BadgePercent size={15}/>{t('خصم على السلة','Basket discount')}</label><div><input id="pos-discount" type="number" min="0" max="100" step="0.01" value={discount} onChange={(event) => setDiscount(event.target.value)} disabled={!totals.lines.length}/><span>%</span></div></div>
         <div className="pos-total-lines"><div><span>{t('المجموع قبل الخصم','Gross subtotal')}</span><b>{formatMoney(totals.subtotal, ar)}</b></div><div><span>{t('الخصم','Discount')}</span><b className="discount-value">−{formatMoney(totals.discount, ar)}</b></div><div><span>{t('الضريبة','VAT')}</span><b>{formatMoney(totals.vat, ar)}</b></div><div className="pos-grand-total"><span>{t('الإجمالي المستحق','Amount due')}</span><b>{formatMoney(totals.total, ar)}</b></div></div>
         <div className="pos-payment-heading"><span className="eyebrow">{t('توزيع الدفع','PAYMENT SPLIT')}</span><span>{t('ريال سعودي','SAR')}</span></div>
+        <label className="pos-invoice-type"><span>{t('نوع الفاتورة', 'Invoice type')}</span><select value={invoiceType} onChange={(event) => setInvoiceType(event.target.value as 'simplified' | 'tax')}><option value="simplified">{t('فاتورة مبسطة / غير ضريبية', 'Simplified / non-tax invoice')}</option><option value="tax">{t('فاتورة ضريبية', 'Tax invoice')}</option></select></label>
         <div className="pos-payment-row"><label><Banknote size={15}/>{t('نقدًا','Cash')}</label><input type="number" min="0" step="0.01" inputMode="decimal" aria-label={t('المبلغ النقدي','Cash amount')} value={cashAmount} onChange={(event) => setCashAmount(event.target.value)} onFocus={(event) => event.currentTarget.select()}/><button className="pos-fill-button" onClick={useCashForRemaining}>{t('الباقي','Fill')}</button></div>
         <div className="pos-payment-row"><label><CreditCard size={15}/>{t('بطاقة','Card')}</label><input type="number" min="0" step="0.01" inputMode="decimal" aria-label={t('مبلغ البطاقة','Card amount')} value={cardAmount} onChange={(event) => setCardAmount(event.target.value)} onFocus={(event) => event.currentTarget.select()}/><button className="pos-fill-button" onClick={useCardForRemaining}>{t('الباقي','Fill')}</button></div>
+        {selectedCustomMethod && <div className="pos-payment-row"><label><WalletCards size={15}/>{ar ? selectedCustomMethod.labelAr : selectedCustomMethod.labelEn}</label><input type="number" min="0" step="0.01" inputMode="decimal" aria-label={ar ? selectedCustomMethod.labelAr : selectedCustomMethod.labelEn} value={customAmount} onChange={(event) => setCustomAmount(event.target.value)} onFocus={(event) => event.currentTarget.select()}/><button className="pos-fill-button" onClick={useCustomForRemaining}>{t('الباقي','Fill')}</button></div>}
+        {paymentMethods.filter((method) => !['cash', 'card'].includes(method.code)).length > 1 && <label className="pos-payment-method-select"><span>{t('طريقة إضافية', 'Additional method')}</span><select value={selectedPaymentMethod} onChange={(event) => { setSelectedPaymentMethod(event.target.value); setCustomAmount('0'); }}>{paymentMethods.filter((method) => !['cash', 'card'].includes(method.code)).map((method) => <option key={method.code} value={method.code}>{ar ? method.labelAr : method.labelEn}</option>)}</select></label>}
         <div className={`pos-payment-balance ${invalidPayment || invalidDiscount ? 'has-error' : ''}`}><span>{invalidDiscount ? t('الخصم الأقصى ١٠٠٪','Discount limit is 100%') : invalidPayment ? t('الزيادة تكون نقدًا فقط','Change is cash-only') : due > 0n ? t('متبقي غير محصّل','Balance remaining') : t('الباقي للعميل','Change due')}</span><b>{formatMoney(invalidPayment ? 0n : due > 0n ? due : change, ar)}</b></div>
         <button className="button button-primary pos-complete" onClick={checkout} disabled={!totals.lines.length || tendered === 0n || invalidPayment || invalidDiscount || saving}><WalletCards size={17}/>{saving ? t('جارٍ تسجيل البيع…','Recording sale…') : demoMode ? t('معاينة الدفع','Preview checkout') : t('تسجيل البيع','Record sale')}</button>
         <small className="pos-server-note">{demoMode ? t('المعاينة لا تنشئ معاملة فعلية.','Preview does not create a real transaction.') : t('يعيد الخادم احتساب السعر والضريبة من سجل الصنف قبل الحفظ.','Server rechecks catalog prices and tax before commit.')}</small>

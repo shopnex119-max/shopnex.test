@@ -1,12 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  AlertTriangle, ArrowUpLeft, CheckCircle2, Database, Globe2, HardDrive, KeyRound, Languages,
+  AlertTriangle, ArrowUpLeft, CheckCircle2, CreditCard, Database, Globe2, HardDrive, KeyRound, Languages,
   LockKeyhole, MonitorCog, Moon, RotateCcw, ShieldCheck, Wifi, WifiOff, X,
 } from 'lucide-react';
 import { getHealth, resetOperationalData, type OperationalResetResult } from '../../app/api';
 import './settings-integrations.css';
 import './settings-reset.css';
 import type { AppLanguage } from '../../app/types';
+import { DEFAULT_PAYMENT_METHODS, loadPaymentMethods, savePaymentMethods, type PaymentMethod } from '../../app/paymentMethods';
 
 export default function SettingsPage({
   lang, demoMode, canReset, onNavigateToZatca,
@@ -23,8 +24,25 @@ export default function SettingsPage({
   const [resetBusy, setResetBusy] = useState(false);
   const [resetError, setResetError] = useState('');
   const [resetResult, setResetResult] = useState<OperationalResetResult | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(loadPaymentMethods);
+  const [newPaymentAr, setNewPaymentAr] = useState('');
+  const [newPaymentEn, setNewPaymentEn] = useState('');
+  const [newPaymentKind, setNewPaymentKind] = useState<PaymentMethod['kind']>('electronic');
   const t = (a: string, e: string) => ar ? a : e;
   useEffect(() => { getHealth().then(setHealth).catch(() => setHealth(null)); }, []);
+  const addPaymentMethod = (event: FormEvent) => {
+    event.preventDefault();
+    const labelAr = newPaymentAr.trim(); const labelEn = newPaymentEn.trim();
+    if (!labelAr || !labelEn) return;
+    const code = `custom_${labelEn.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}_${Date.now().toString(36)}`;
+    const next = [...paymentMethods, { code, labelAr, labelEn, kind: newPaymentKind }];
+    setPaymentMethods(next); savePaymentMethods(next); setNewPaymentAr(''); setNewPaymentEn('');
+  };
+  const removePaymentMethod = (code: string) => {
+    if (DEFAULT_PAYMENT_METHODS.some((method) => method.code === code)) return;
+    const next = paymentMethods.filter((method) => method.code !== code);
+    setPaymentMethods(next); savePaymentMethods(next);
+  };
 
   const closeReset = () => {
     if (resetBusy) return;
@@ -80,6 +98,17 @@ export default function SettingsPage({
         <SettingRow icon={Moon} label={t('المظهر الافتراضي', 'Default theme')} value={t('داكن فضائي', 'Cosmic dark')}/>
         <SettingRow icon={Languages} label={t('اللغة الافتراضية', 'Default language')} value={t('العربية (RTL)', 'Arabic (RTL)')}/>
         <div className="setting-footnote"><WifiOff size={14}/>{t('تفضيلات العرض التفاعلية متاحة من الشريط العلوي.', 'Interactive display preferences are available in the top bar.')}</div>
+      </article>
+      <article className="panel setting-panel payment-methods-panel">
+        <div className="panel-heading"><div><span className="eyebrow">{t('إعدادات البيع', 'SALES SETTINGS')}</span><h2>{t('طرق الدفع', 'Payment methods')}</h2></div><CreditCard size={18}/></div>
+        <p className="payment-methods-intro">{t('أضف طرق الدفع التي تستخدمها في منشأتك، وستظهر مباشرة في شاشة الكاشير وعلى الفاتورة المطبوعة.', 'Add the payment methods used by your business. They appear in the cashier and on printed invoices.')}</p>
+        <div className="payment-method-list">{paymentMethods.map((method) => <div className="payment-method-item" key={method.code}><span className="payment-method-dot"><CreditCard size={14}/></span><div><b>{ar ? method.labelAr : method.labelEn}</b><small>{ar ? method.labelEn : method.labelAr} · {method.kind === 'cash' ? t('نقدي', 'Cash') : t('إلكتروني', 'Electronic')}</small></div>{!DEFAULT_PAYMENT_METHODS.some((item) => item.code === method.code) && <button type="button" className="icon-button" onClick={() => removePaymentMethod(method.code)} aria-label={t('حذف طريقة الدفع', 'Remove payment method')}><X size={14}/></button>}</div>)}</div>
+        <form className="payment-method-form" onSubmit={addPaymentMethod}>
+          <label><span>{t('الاسم بالعربية', 'Arabic name')}</span><input value={newPaymentAr} onChange={(event) => setNewPaymentAr(event.target.value)} placeholder={t('مثال: تمارا', 'Example: Tamara')} maxLength={60}/></label>
+          <label><span>{t('الاسم بالإنجليزية', 'English name')}</span><input value={newPaymentEn} onChange={(event) => setNewPaymentEn(event.target.value)} placeholder="Example: Tamara" maxLength={60}/></label>
+          <label><span>{t('نوع التسوية', 'Settlement type')}</span><select value={newPaymentKind} onChange={(event) => setNewPaymentKind(event.target.value as PaymentMethod['kind'])}><option value="electronic">{t('إلكتروني', 'Electronic')}</option><option value="cash">{t('نقدي', 'Cash')}</option></select></label>
+          <button className="button button-primary" type="submit" disabled={!newPaymentAr.trim() || !newPaymentEn.trim()}>{t('إضافة طريقة', 'Add method')}</button>
+        </form>
       </article>
       <article className="panel setting-panel reset-settings-panel">
         <div className="panel-heading"><div><span className="eyebrow">{t('إجراء إداري حساس', 'SENSITIVE ADMIN ACTION')}</span><h2>{t('تصفير بيانات التشغيل', 'Reset operational data')}</h2></div><AlertTriangle size={18}/></div>
