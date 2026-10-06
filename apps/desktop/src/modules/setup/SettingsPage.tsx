@@ -4,6 +4,7 @@ import {
   LockKeyhole, MonitorCog, Moon, RotateCcw, ShieldCheck, Wifi, WifiOff, X,
 } from 'lucide-react';
 import { getHealth, resetOperationalData, type OperationalResetResult } from '../../app/api';
+import { resetPreviewData } from '../../app/browserDemoApi';
 import './settings-integrations.css';
 import './settings-reset.css';
 import type { AppLanguage } from '../../app/types';
@@ -53,11 +54,11 @@ export default function SettingsPage({
 
   const submitReset = async (event: FormEvent) => {
     event.preventDefault();
-    if (demoMode || !canReset || resetBusy) return;
+    if ((!demoMode && !canReset) || resetBusy) return;
     setResetBusy(true);
     setResetError('');
     try {
-      const result = await resetOperationalData(resetPassword);
+      const result = demoMode ? resetPreviewData() : await resetOperationalData(resetPassword);
       setResetResult(result);
       setResetPassword('');
     } catch (error) {
@@ -114,9 +115,9 @@ export default function SettingsPage({
         <div className="panel-heading"><div><span className="eyebrow">{t('إجراء إداري حساس', 'SENSITIVE ADMIN ACTION')}</span><h2>{t('تصفير بيانات التشغيل', 'Reset operational data')}</h2></div><AlertTriangle size={18}/></div>
         <p>{t('يمسح الفواتير والمبيعات والمشتريات والدفعات والقيود وحركات المخزون والمنتجات والعملاء والموردين. يحتفظ بحسابات المستخدمين وبيانات المنشأة ودليل الحسابات وقواعد الضريبة وإعدادات وسجل زاتكا، ولا يمس سجلات المطاعم والمطبخ والموارد البشرية.', 'Deletes sales/invoices, purchases/payments, journal entries, inventory movements, products, CRM customers and suppliers. Preserves user accounts, company setup, chart of accounts, tax rules and ZATCA settings/history; restaurant, kitchen and HR records are not changed.')}</p>
         <div className="reset-panel-actions">
-          <button className="button reset-button" disabled={!canReset || demoMode} onClick={() => { setResetOpen(true); setResetError(''); setResetResult(null); }}><RotateCcw size={15}/>{t('تصفير بيانات التشغيل', 'Reset operational data')}</button>
+          <button className="button reset-button" disabled={!canReset} onClick={() => { setResetOpen(true); setResetError(''); setResetResult(null); }}><RotateCcw size={15}/>{t('تصفير بيانات التشغيل', 'Reset operational data')}</button>
           <span className="setting-footnote"><LockKeyhole size={14}/>{demoMode
-            ? t('يتطلب API محلية؛ الموقع التجريبي لا يحفظ بيانات تشغيل.', 'Requires the local API; the public demo does not persist operational data.')
+            ? t('تصفير يدوي لبيانات المعاينة داخل هذا المتصفح فقط، ولا يتصل بأي خادم.', 'Manual reset for this browser preview only; no server or real business data is affected.')
             : canReset
               ? t('يتطلب كلمة مرور حساب المدير، وتأكيدًا قبل التنفيذ.', 'Requires the administrator account password and explicit confirmation.')
               : t('يتاح لمسؤول النظام فقط.', 'Available to system administrators only.')}</span>
@@ -130,9 +131,9 @@ export default function SettingsPage({
         {resetResult ? <div className="reset-success" role="status"><CheckCircle2 size={20}/><div><b>{t('تم تصفير بيانات التشغيل.', 'Operational data reset completed.')}</b><p>{t('احتفظ النظام بحسابات المستخدمين والإعدادات وسجل زاتكا.', 'User accounts, setup and ZATCA history were preserved.')}</p></div></div> : <>
           <div className="reset-warning-card"><p>{t('سيتم حذف بيانات التشغيل المحلية المحددة، بما فيها سجلات العملاء. لا تُحذف إعدادات زاتكا أو الحسابات أو دليل الحسابات أو قواعد الضريبة، ولا تمس سجلات المطاعم والمطبخ والموارد البشرية.', 'The selected local operational data, including customer records, will be deleted. ZATCA settings, accounts, chart of accounts and tax rules are kept; restaurant, kitchen and HR records are not changed.')}</p></div>
           <form onSubmit={submitReset}>
-            <label className="form-field reset-password-field"><span>{t('أدخل كلمة مرور حساب المدير للتأكيد', 'Enter the administrator account password')}</span><div className="sensitive-password-input"><KeyRound size={15}/><input type="password" value={resetPassword} onChange={(event) => setResetPassword(event.target.value)} autoComplete="current-password" minLength={12} maxLength={256} required disabled={!canReset || demoMode}/></div></label>
+            {!demoMode && <label className="form-field reset-password-field"><span>{t('أدخل كلمة مرور حساب المدير للتأكيد', 'Enter the administrator account password')}</span><div className="sensitive-password-input"><KeyRound size={15}/><input type="password" value={resetPassword} onChange={(event) => setResetPassword(event.target.value)} autoComplete="current-password" minLength={12} maxLength={256} required disabled={!canReset}/></div></label>}
             {resetError && <div className="auth-error" role="alert"><AlertTriangle size={15}/><span>{resetError}</span></div>}
-            <div className="reset-dialog-actions"><button type="button" className="button button-ghost" onClick={closeReset} disabled={resetBusy}>{t('إلغاء', 'Cancel')}</button><button className="button reset-button" disabled={resetBusy || !canReset || demoMode || resetPassword.length < 12}>{resetBusy ? t('جارٍ التصفير…', 'Resetting…') : t('تأكيد التصفير', 'Confirm reset')}<RotateCcw size={15}/></button></div>
+            <div className="reset-dialog-actions"><button type="button" className="button button-ghost" onClick={closeReset} disabled={resetBusy}>{t('إلغاء', 'Cancel')}</button><button className="button reset-button" disabled={resetBusy || !canReset || (!demoMode && resetPassword.length < 12)}>{resetBusy ? t('جارٍ التصفير…', 'Resetting…') : t('تأكيد التصفير', 'Confirm reset')}<RotateCcw size={15}/></button></div>
           </form>
         </>}
         {resetResult && <div className="reset-dialog-actions"><button className="button button-primary" onClick={closeReset}>{t('تم', 'Done')}</button></div>}

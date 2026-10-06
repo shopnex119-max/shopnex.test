@@ -5,6 +5,7 @@ import type {
 import { calculateLineMinor, parseMinor, parseQuantityThousandths, toDecimalString, toQuantityString } from './finance';
 
 const STORAGE_KEY = 'shopnex:interactive-preview:v1';
+const PAYMENT_METHODS_KEY = 'shopnex.payment-methods.v1';
 type PublicModule = 'restaurant' | 'crm' | 'hr';
 type DemoState = {
   version: 1;
@@ -38,6 +39,20 @@ const sampleKitchenOrders: ModuleRecord[] = [
 
 function initialState(): DemoState {
   return { version: 1, products: sampleProducts.map((product) => ({ ...product })), invoices: [], modules: { restaurant: sampleKitchenOrders.map((record) => ({ ...record })), crm: [], hr: [] } };
+}
+
+export function resetPreviewData(): { message: string; deleted_counts: Record<string, number>; preserved_records_present: Record<string, number> } {
+  const previous = readState();
+  const deleted_counts = {
+    invoices: previous.invoices.length,
+    products: previous.products.filter((product) => !product.id.startsWith('preview-')).length,
+    customers: previous.modules.crm.length,
+    restaurant_records: previous.modules.restaurant.length,
+    hr_records: previous.modules.hr.length,
+  };
+  window.localStorage.removeItem(PAYMENT_METHODS_KEY);
+  writeState(initialState());
+  return { message: 'Browser preview data reset completed', deleted_counts, preserved_records_present: { sample_products_reloaded: 1, demo_data_reloaded: 1 } };
 }
 
 function readState(): DemoState {

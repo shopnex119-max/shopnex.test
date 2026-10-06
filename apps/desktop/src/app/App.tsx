@@ -147,7 +147,7 @@ export default function App() {
         </header>
         <div className="page-content" key={`${page}-${lang}`}>
           {page === 'overview' && <Dashboard lang={lang} onNavigate={setPage}/>}
-          {page === 'zatca' && (sensitiveUnlockFor === 'zatca' ? <ZatcaPage lang={lang} demoMode={authMode === 'demo'}/> : <SensitiveAccessGate page="zatca" lang={lang} onUnlock={(user) => completeSensitiveUnlock('zatca', user)} onCancel={() => setPage('overview')}/>)}
+          {page === 'zatca' && (authMode === 'demo' || sensitiveUnlockFor === 'zatca' ? <ZatcaPage lang={lang} demoMode={authMode === 'demo'}/> : <SensitiveAccessGate page="zatca" lang={lang} onUnlock={(user) => completeSensitiveUnlock('zatca', user)} onCancel={() => setPage('overview')}/>)}
           {page === 'sales' && <PosPage lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'invoices' && <OperationsPage lang={lang} mode="invoices" demoMode={authMode === 'demo'}/>}
           {page === 'inventory' && <InventoryPage lang={lang} demoMode={authMode === 'demo'}/>}
@@ -157,7 +157,7 @@ export default function App() {
           {page === 'guest' && <GuestPage lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'crm' && <ModuleWorkspace module="crm" lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'hr' && <ModuleWorkspace module="hr" lang={lang} demoMode={authMode === 'demo'}/>}
-          {page === 'settings' && <SettingsPage lang={lang} demoMode={authMode === 'demo'} canReset={authMode === 'authenticated' && ['super admin', 'company admin', 'admin', 'owner'].includes((profile?.role ?? '').trim().toLowerCase())} onNavigateToZatca={() => { setSensitiveUnlockFor(null); setPage('zatca'); }} />}
+          {page === 'settings' && <SettingsPage lang={lang} demoMode={authMode === 'demo'} canReset={authMode === 'demo' || (authMode === 'authenticated' && ['super admin', 'company admin', 'admin', 'owner'].includes((profile?.role ?? '').trim().toLowerCase()))} onNavigateToZatca={() => { setSensitiveUnlockFor(null); setPage('zatca'); }} />}
           {page === 'coming-soon' && <ComingSoon lang={lang} title={isAr ? comingPage?.label : comingPage?.labelEn}/>}
           {page === 'purchasing' && <PurchasingPage lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'accounting' && <AccountingPage lang={lang} demoMode={authMode === 'demo'}/>}
