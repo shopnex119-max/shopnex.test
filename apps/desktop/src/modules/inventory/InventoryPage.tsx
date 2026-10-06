@@ -6,14 +6,7 @@ import { createProduct, getProducts, type CatalogProduct } from '../../app/api';
 type StockFlag = 'متوفر' | 'منخفض' | 'نفد';
 type InventoryProduct = { id: string; sku: string; name: string; category: string; qty: number; price: string; averageCost: string; location: string; flag: StockFlag; vatRate: string; taxCategory: string; taxReason: string; includesVat: boolean };
 
-const previewProducts: InventoryProduct[] = [
-  { id: 'preview-stock-1', sku: 'SHX-1042', name: 'سماعة لاسلكية — Nova Pro', category: 'إلكترونيات', qty: 24, price: '449.00', averageCost: '220.00', location: 'مستودع الرياض', flag: 'متوفر', vatRate: '15.00', taxCategory: 'standard', taxReason: '', includesVat: false },
-  { id: 'preview-stock-2', sku: 'SHX-2031', name: 'مصباح مكتبي — Arc Lite', category: 'المنزل والمكتب', qty: 7, price: '189.00', averageCost: '82.00', location: 'مستودع جدة', flag: 'منخفض', vatRate: '15.00', taxCategory: 'standard', taxReason: '', includesVat: false },
-  { id: 'preview-stock-3', sku: 'SHX-1107', name: 'شاحن سريع — Pulse 65W', category: 'إلكترونيات', qty: 52, price: '129.00', averageCost: '44.00', location: 'مستودع الرياض', flag: 'متوفر', vatRate: '15.00', taxCategory: 'standard', taxReason: '', includesVat: false },
-  { id: 'preview-stock-4', sku: 'SHX-4401', name: 'حامل شاشة — Orbit Desk', category: 'المنزل والمكتب', qty: 3, price: '325.00', averageCost: '156.00', location: 'مستودع الخبر', flag: 'منخفض', vatRate: '15.00', taxCategory: 'standard', taxReason: '', includesVat: false },
-  { id: 'preview-stock-5', sku: 'SHX-3180', name: 'لوحة مفاتيح — Comet 75', category: 'إلكترونيات', qty: 18, price: '379.00', averageCost: '170.00', location: 'مستودع الدمام', flag: 'متوفر', vatRate: '15.00', taxCategory: 'standard', taxReason: '', includesVat: false },
-  { id: 'preview-stock-6', sku: 'SHX-5224', name: 'زجاجة حرارية — Terra', category: 'نمط الحياة', qty: 0, price: '89.00', averageCost: '0.00', location: 'مستودع الرياض', flag: 'نفد', vatRate: '15.00', taxCategory: 'standard', taxReason: '', includesVat: false },
-];
+const previewProducts: InventoryProduct[] = [];
 
 function asRow(product: CatalogProduct): InventoryProduct {
   const qty = Number(product.quantity);

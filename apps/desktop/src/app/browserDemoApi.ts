@@ -4,41 +4,18 @@ import type {
 } from './api';
 import { calculateLineMinor, parseMinor, parseQuantityThousandths, toDecimalString, toQuantityString } from './finance';
 
-const STORAGE_KEY = 'shopnex:interactive-preview:v1';
+const STORAGE_KEY = 'shopnex:interactive-preview:v2-empty';
 const PAYMENT_METHODS_KEY = 'shopnex.payment-methods.v1';
 type PublicModule = 'restaurant' | 'crm' | 'hr';
 type DemoState = {
-  version: 1;
+  version: 2;
   products: CatalogProduct[];
   invoices: InvoiceDetail[];
   modules: Record<PublicModule, ModuleRecord[]>;
 };
 
-const sampleProducts: CatalogProduct[] = [
-  { id: 'preview-burger', sku: 'FD-001', name: 'برجر لحم', category: 'وجبات', price: '32.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '80.000', average_cost: '18.00', price_includes_vat: false, active: true },
-  { id: 'preview-pizza', sku: 'FD-002', name: 'بيتزا مارغريتا', category: 'وجبات', price: '38.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '60.000', average_cost: '21.00', price_includes_vat: false, active: true },
-  { id: 'preview-coffee', sku: 'CF-001', name: 'قهوة مختصة', category: 'مشروبات', price: '18.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '120.000', average_cost: '7.00', price_includes_vat: false, active: true },
-  { id: 'preview-water', sku: 'DR-001', name: 'مياه معدنية', category: 'مشروبات', price: '3.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '300.000', average_cost: '1.00', price_includes_vat: true, active: true },
-  { id: 'preview-fries', sku: 'FD-003', name: 'بطاطس مقلية', category: 'إضافات', price: '12.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '100.000', average_cost: '4.00', price_includes_vat: false, active: true },
-  { id: 'preview-cake', sku: 'DS-001', name: 'كيك الشوكولاتة', category: 'حلويات', price: '22.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '25.000', average_cost: '9.00', price_includes_vat: false, active: true },
-  { id: 'preview-tea', sku: 'CF-002', name: 'شاي أحمر', category: 'مشروبات', price: '8.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '90.000', average_cost: '2.00', price_includes_vat: false, active: true },
-  { id: 'preview-salad', sku: 'FD-004', name: 'سلطة طازجة', category: 'إضافات', price: '16.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '45.000', average_cost: '6.00', price_includes_vat: false, active: true },
-  { id: 'preview-stock-1', sku: 'SHX-1042', name: 'سماعة لاسلكية — Nova Pro', category: 'إلكترونيات', price: '449.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '24.000', average_cost: '220.00', price_includes_vat: false, active: true },
-  { id: 'preview-stock-2', sku: 'SHX-2031', name: 'مصباح مكتبي — Arc Lite', category: 'المنزل والمكتب', price: '189.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '7.000', average_cost: '82.00', price_includes_vat: false, active: true },
-  { id: 'preview-stock-3', sku: 'SHX-1107', name: 'شاحن سريع — Pulse 65W', category: 'إلكترونيات', price: '129.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '52.000', average_cost: '44.00', price_includes_vat: false, active: true },
-  { id: 'preview-stock-4', sku: 'SHX-4401', name: 'حامل شاشة — Orbit Desk', category: 'المنزل والمكتب', price: '325.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '3.000', average_cost: '156.00', price_includes_vat: false, active: true },
-  { id: 'preview-stock-5', sku: 'SHX-3180', name: 'لوحة مفاتيح — Comet 75', category: 'إلكترونيات', price: '379.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '18.000', average_cost: '170.00', price_includes_vat: false, active: true },
-  { id: 'preview-stock-6', sku: 'SHX-5224', name: 'زجاجة حرارية — Terra', category: 'نمط الحياة', price: '89.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '0.000', average_cost: '0.00', price_includes_vat: false, active: true },
-];
-
-const sampleKitchenOrders: ModuleRecord[] = [
-  { id: 'kds-1048', module: 'restaurant', created_at: '2026-10-06T09:42:00.000Z', updated_at: '2026-10-06T09:42:00.000Z', data: { type: 'order', name: 'طلب #1048', location: 'طاولة 03 · داخل المطعم', amount: '85.00', status: 'new', items: [{ name: 'برجر لحم كلاسيكي', quantity: 2, note: 'بدون بصل' }, { name: 'بطاطس مقرمشة', quantity: 1, note: '' }], priority: 'normal' } },
-  { id: 'kds-1049', module: 'restaurant', created_at: '2026-10-06T09:48:00.000Z', updated_at: '2026-10-06T09:48:00.000Z', data: { type: 'order', name: 'طلب #1049', location: 'سفري · استلام', amount: '64.00', status: 'preparing', items: [{ name: 'بيتزا مارغريتا', quantity: 1, note: 'مقرمشة' }, { name: 'قهوة اليوم', quantity: 1, note: '' }], priority: 'urgent' } },
-  { id: 'kds-1050', module: 'restaurant', created_at: '2026-10-06T09:53:00.000Z', updated_at: '2026-10-06T09:53:00.000Z', data: { type: 'order', name: 'طلب #1050', location: 'طاولة 11 · داخل المطعم', amount: '38.00', status: 'ready', items: [{ name: 'بيتزا مارغريتا', quantity: 1, note: 'تقطيع ٦ قطع' }], priority: 'normal' } },
-];
-
 function initialState(): DemoState {
-  return { version: 1, products: sampleProducts.map((product) => ({ ...product })), invoices: [], modules: { restaurant: sampleKitchenOrders.map((record) => ({ ...record })), crm: [], hr: [] } };
+  return { version: 2, products: [], invoices: [], modules: { restaurant: [], crm: [], hr: [] } };
 }
 
 export function resetPreviewData(): { message: string; deleted_counts: Record<string, number>; preserved_records_present: Record<string, number> } {
@@ -52,7 +29,7 @@ export function resetPreviewData(): { message: string; deleted_counts: Record<st
   };
   window.localStorage.removeItem(PAYMENT_METHODS_KEY);
   writeState(initialState());
-  return { message: 'Browser preview data reset completed', deleted_counts, preserved_records_present: { sample_products_reloaded: 1, demo_data_reloaded: 1 } };
+  return { message: 'Browser preview data reset completed', deleted_counts, preserved_records_present: { sample_products_reloaded: 0, demo_data_reloaded: 0 } };
 }
 
 function readState(): DemoState {
@@ -65,7 +42,7 @@ function readState(): DemoState {
       return fresh;
     }
     const parsed = JSON.parse(raw) as Partial<DemoState>;
-    if (parsed.version !== 1 || !Array.isArray(parsed.products) || !Array.isArray(parsed.invoices) || !parsed.modules) {
+    if (parsed.version !== 2 || !Array.isArray(parsed.products) || !Array.isArray(parsed.invoices) || !parsed.modules) {
       throw new Error('The stored preview data format is unsupported. Clear this site’s browser data and reload.');
     }
     return parsed as DemoState;

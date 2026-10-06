@@ -7,17 +7,12 @@ import { calculateLineMinor, formatValue, parseMinor, parseQuantityThousandths, 
 type PurchaseLineDraft = { product_id: string; quantity: string; unit_cost: string; discount_percent: string; price_includes_vat: boolean };
 type Props = { lang: AppLanguage; demoMode: boolean };
 
-const previewSuppliers: Supplier[] = [
-  { id: 'demo-supplier-1', supplier_code: 'SUP-001', name: 'شركة الإمداد التجاري', vat_number: '310000000000003', phone: '0115550000', email: '', payment_terms_days: 30, credit_limit: '50000.00', active: true },
-  { id: 'demo-supplier-2', supplier_code: 'SUP-002', name: 'مؤسسة مخازن الرياض', vat_number: '', phone: '0551000000', email: '', payment_terms_days: 14, credit_limit: '12000.00', active: true },
-];
-const previewProducts: CatalogProduct[] = [
-  { id: 'demo-product-1', sku: 'SKU-101', name: 'قهوة مختصة', category: 'أغذية', price: '42.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '18.000', average_cost: '21.00', price_includes_vat: false, active: true },
-  { id: 'demo-product-2', sku: 'SKU-102', name: 'أكواب ورقية', category: 'تغليف', price: '12.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, quantity: '30.000', average_cost: '5.00', price_includes_vat: false, active: true },
-];
-const previewPurchases: PurchaseRecord[] = [
-  { id: 'demo-purchase-1', purchase_number: 'PUR-20261005-01', supplier_invoice_number: 'INV-S-8841', supplier_id: previewSuppliers[0].id, supplier_name: previewSuppliers[0].name, status: 'partially_paid', subtotal: '420.00', discount_total: '0.00', taxable_subtotal: '420.00', vat_total: '63.00', total: '483.00', amount_paid: '200.00', balance_due: '283.00', due_date: '2026-11-04', created_at: '2026-10-05T10:00:00Z', currency: 'SAR', lines: [], payments: [] },
-];
+const previewSuppliers: Supplier[] = [];
+
+const previewProducts: CatalogProduct[] = [];
+
+const previewPurchases: PurchaseRecord[] = [];
+
 
 function rowStatus(status: PurchaseRecord['status'], ar: boolean) {
   return status === 'paid' ? (ar ? 'مدفوعة' : 'Paid') : status === 'partially_paid' ? (ar ? 'مدفوعة جزئيًا' : 'Partially paid') : (ar ? 'آجلة' : 'Unpaid');
@@ -53,7 +48,7 @@ export default function PurchasingPage({ lang, demoMode }: Props) {
     let active = true;
     if (demoMode) {
       setProducts(previewProducts); setSuppliers(previewSuppliers); setPurchases(previewPurchases); setLoading(false);
-      setLines((current) => current.map((line) => ({ ...line, product_id: line.product_id || previewProducts[0].id, unit_cost: line.unit_cost === '0.00' ? previewProducts[0].average_cost : line.unit_cost })));
+      if (previewProducts.length) setLines((current) => current.map((line) => ({ ...line, product_id: line.product_id || previewProducts[0].id, unit_cost: line.unit_cost === '0.00' ? previewProducts[0].average_cost : line.unit_cost })));
       return () => { active = false; };
     }
     setLoading(true); setError('');

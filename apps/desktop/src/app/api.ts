@@ -265,3 +265,7 @@ export async function updateModuleRecord(module: ModuleName, id: string, data: R
     method: 'PUT', body: JSON.stringify({ data }),
   });
 }
+
+export async function deleteModuleRecord(module: ModuleName, id: string) {
+  return apiRequest<void>(`/api/v1/modules/${module}/records/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}

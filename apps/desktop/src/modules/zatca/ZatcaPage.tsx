@@ -164,9 +164,8 @@ function SettingsIcon() { return <ShieldCheck size={16}/>; }
 function DocumentsTab({ lang, demoMode }: { lang: AppLanguage; demoMode: boolean }) {
   const ar = lang === 'ar';
   const t = (a: string, e: string) => ar ? a : e;
-  const previewInvoice: SavedInvoice = { id: 'preview-invoice-001', invoice_number: 'INV-PREVIEW-001', invoice_type: 'tax', status: 'paid', subtotal: '100.00', discount_total: '0.00', taxable_subtotal: '100.00', vat_total: '15.00', total: '115.00', amount_paid: '115.00', change_due: '0.00', currency: 'SAR', created_at: '2026-10-05T11:00:00Z' };
-  const [invoices, setInvoices] = useState<SavedInvoice[]>(demoMode ? [previewInvoice] : []);
-  const [selectedId, setSelectedId] = useState(demoMode ? previewInvoice.id : '');
+  const [invoices, setInvoices] = useState<SavedInvoice[]>([]);
+  const [selectedId, setSelectedId] = useState('');
   const [qr, setQr] = useState<{ qr_base64: string; tags: { tag: number; length: number; value: string }[]; disclaimer: string } | null>(null);
   const [loading, setLoading] = useState(!demoMode);
   const [busy, setBusy] = useState(false);
@@ -175,7 +174,7 @@ function DocumentsTab({ lang, demoMode }: { lang: AppLanguage; demoMode: boolean
 
   useEffect(() => {
     let active = true;
-    if (demoMode) { setInvoices([previewInvoice]); setSelectedId(previewInvoice.id); setLoading(false); return () => { active = false; }; }
+    if (demoMode) { setInvoices([]); setSelectedId(''); setLoading(false); return () => { active = false; }; }
     setLoading(true); setError('');
     getInvoices().then((rows) => { if (active) { setInvoices(rows); setSelectedId(rows[0]?.id ?? ''); } })
       .catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : t('تعذر تحميل سجل الفواتير.','Could not load invoice register.')); })

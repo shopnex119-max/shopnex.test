@@ -9,16 +9,7 @@ type Product = CatalogProduct & { tint?: string; symbol?: string };
 type Cart = Record<string, number>;
 type ReceiptState = { invoice: InvoiceReceiptPayload; qrBase64: string | null; qrDisclaimer: string; sellerName?: string; vatNumber?: string; demoMode: boolean };
 
-const previewProducts: Product[] = [
-  { id: 'preview-burger', sku: 'FD-001', name: 'برجر لحم', category: 'وجبات', price: '32.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, average_cost: '18.00', quantity: '80', price_includes_vat: false, active: true, tint: 'rose', symbol: '🍔' },
-  { id: 'preview-pizza', sku: 'FD-002', name: 'بيتزا مارغريتا', category: 'وجبات', price: '38.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, average_cost: '21.00', quantity: '60', price_includes_vat: false, active: true, tint: 'amber', symbol: '🍕' },
-  { id: 'preview-coffee', sku: 'CF-001', name: 'قهوة مختصة', category: 'مشروبات', price: '18.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, average_cost: '7.00', quantity: '120', price_includes_vat: false, active: true, tint: 'coffee', symbol: '☕' },
-  { id: 'preview-water', sku: 'DR-001', name: 'مياه معدنية', category: 'مشروبات', price: '3.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, average_cost: '1.00', quantity: '300', price_includes_vat: true, active: true, tint: 'blue', symbol: '💧' },
-  { id: 'preview-fries', sku: 'FD-003', name: 'بطاطس مقلية', category: 'إضافات', price: '12.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, average_cost: '4.00', quantity: '100', price_includes_vat: false, active: true, tint: 'gold', symbol: '🍟' },
-  { id: 'preview-cake', sku: 'DS-001', name: 'كيك الشوكولاتة', category: 'حلويات', price: '22.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, average_cost: '9.00', quantity: '25', price_includes_vat: false, active: true, tint: 'violet', symbol: '🍰' },
-  { id: 'preview-tea', sku: 'CF-002', name: 'شاي أحمر', category: 'مشروبات', price: '8.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, average_cost: '2.00', quantity: '90', price_includes_vat: false, active: true, tint: 'green', symbol: '🫖' },
-  { id: 'preview-salad', sku: 'FD-004', name: 'سلطة طازجة', category: 'إضافات', price: '16.00', vat_rate: '15.00', tax_category: 'standard', tax_reason: '', tax_rule_id: null, average_cost: '6.00', quantity: '45', price_includes_vat: false, active: true, tint: 'green', symbol: '🥗' },
-];
+const previewProducts: Product[] = [];
 
 const categoriesEn = ['All', 'Meals', 'Drinks', 'Sides', 'Desserts'];
 const categoryFor = (value: string, ar: boolean) => {

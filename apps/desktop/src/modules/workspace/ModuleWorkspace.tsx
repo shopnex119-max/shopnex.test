@@ -1,27 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Activity, ChefHat, CirclePlus, Clock3, Gift, Search, Users, UserRoundPlus, Utensils, UserCheck, RefreshCw } from 'lucide-react';
+import { Activity, ChefHat, CirclePlus, Clock3, Gift, Search, Users, UserRoundPlus, Utensils, UserCheck, RefreshCw, Trash2 } from 'lucide-react';
 import type { AppLanguage } from '../../app/types';
-import { createModuleRecord, getModuleRecords, updateModuleRecord, type ModuleName, type ModuleRecord } from '../../app/api';
+import { createModuleRecord, deleteModuleRecord, getModuleRecords, updateModuleRecord, type ModuleName, type ModuleRecord } from '../../app/api';
 
 type WorkspaceTab = 'orders' | 'tables' | 'kitchen';
 type FieldSpec = { key: string; ar: string; en: string; type?: 'text' | 'number' | 'select'; options?: { value: string; ar: string; en: string }[]; required?: boolean };
 
-const demoRecords: Record<ModuleName, ModuleRecord[]> = {
-  restaurant: [
-    { id: 'demo-order-1', module: 'restaurant', data: { type: 'order', name: 'طلب #1048', location: 'طاولة 3', amount: '85.00', status: 'preparing' }, created_at: '', updated_at: '' },
-    { id: 'demo-order-2', module: 'restaurant', data: { type: 'order', name: 'طلب #1047', location: 'سفري', amount: '126.50', status: 'ready' }, created_at: '', updated_at: '' },
-    { id: 'demo-table-1', module: 'restaurant', data: { type: 'table', name: 'طاولة 1', seats: 4, status: 'available' }, created_at: '', updated_at: '' },
-    { id: 'demo-table-2', module: 'restaurant', data: { type: 'table', name: 'طاولة 2', seats: 2, status: 'occupied' }, created_at: '', updated_at: '' },
-  ],
-  crm: [
-    { id: 'demo-crm-1', module: 'crm', data: { name: 'مؤسسة الندى التجارية', phone: '0501234567', email: 'hello@example.com', segment: 'regular', points: 240, total_spend: '4820.00' }, created_at: '', updated_at: '' },
-    { id: 'demo-crm-2', module: 'crm', data: { name: 'شركة مدار التقنية', phone: '0559876543', email: '', segment: 'vip', points: 860, total_spend: '12940.00' }, created_at: '', updated_at: '' },
-  ],
-  hr: [
-    { id: 'demo-hr-1', module: 'hr', data: { name: 'سارة العتيبي', role: 'مشرفة مبيعات', department: 'المبيعات', phone: '0503456789', status: 'active' }, created_at: '', updated_at: '' },
-    { id: 'demo-hr-2', module: 'hr', data: { name: 'خالد الحربي', role: 'أمين مستودع', department: 'المخزون', phone: '0557654321', status: 'on_leave' }, created_at: '', updated_at: '' },
-  ],
-};
+const demoRecords: Record<ModuleName, ModuleRecord[]> = { restaurant: [], crm: [], hr: [] };
+
 
 const copy = {
   restaurant: { ar: 'المطاعم والمطبخ', en: 'Restaurant & kitchen', descriptionAr: 'تابع الطلبات والطاولات وحالة تجهيز المطبخ في مساحة واحدة.', descriptionEn: 'Track orders, tables, and kitchen preparation in one workspace.' },
@@ -31,7 +17,7 @@ const copy = {
 
 function text(value: unknown) { return value === undefined || value === null ? '' : String(value); }
 
-export default function ModuleWorkspace({ module, lang, demoMode }: { module: ModuleName; lang: AppLanguage; demoMode: boolean }) {
+export default function ModuleWorkspace({ module, lang, demoMode, canManage = false }: { module: ModuleName; lang: AppLanguage; demoMode: boolean; canManage?: boolean }) {
   const ar = lang === 'ar';
   const t = (a: string, e: string) => ar ? a : e;
   const [records, setRecords] = useState<ModuleRecord[]>([]);
@@ -131,6 +117,16 @@ export default function ModuleWorkspace({ module, lang, demoMode }: { module: Mo
 
   const updateStatus = async (record: ModuleRecord, next: string) => saveRecord({ ...record.data, status: next }, record);
   const addPoints = async (record: ModuleRecord) => saveRecord({ ...record.data, points: Number(record.data.points || 0) + 10 }, record);
+  const deleteRecord = async (record: ModuleRecord) => {
+    if (!canManage || !window.confirm(t('هل تريد حذف هذا السجل نهائيًا؟', 'Delete this record permanently?'))) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      if (!demoMode) await deleteModuleRecord(module, record.id);
+      setRecords((current) => current.filter((item) => item.id !== record.id));
+      setNotice(t('تم حذف السجل بصلاحية المدير.', 'Record deleted with administrator permission.'));
+    } catch (e) { setError(e instanceof Error ? e.message : t('تعذر حذف السجل.', 'Could not delete the record.')); }
+    finally { setBusy(false); }
+  };
   const title = copy[module];
   const orders = records.filter((record) => record.data.type === 'order');
   const tables = records.filter((record) => record.data.type === 'table');
@@ -170,7 +166,7 @@ export default function ModuleWorkspace({ module, lang, demoMode }: { module: Mo
       {module === 'restaurant' && <div className="module-tabs" role="tablist"><button className={tab === 'orders' ? 'active' : ''} onClick={() => setTab('orders')}>{t('الطلبات','Orders')}</button><button className={tab === 'tables' ? 'active' : ''} onClick={() => setTab('tables')}>{t('الطاولات','Tables')}</button><button className={tab === 'kitchen' ? 'active' : ''} onClick={() => setTab('kitchen')}>{t('المطبخ','Kitchen')}<span>{orders.filter((r) => ['new', 'preparing'].includes(text(r.data.status))).length}</span></button></div>}
       {formOpen && <form className="module-form" onSubmit={submit}><div className="module-form-grid">{fields.map((field) => <label className="module-field" key={field.key}><span>{t(field.ar, field.en)}</span>{field.type === 'select' ? <select name={field.key} defaultValue={field.options?.[0]?.value}>{field.options?.map((option) => <option key={option.value} value={option.value}>{t(option.ar, option.en)}</option>)}</select> : <input name={field.key} type={field.type ?? 'text'} min={field.type === 'number' ? '0' : undefined} step={field.key === 'amount' ? '0.01' : field.key === 'seats' ? '1' : undefined} required={field.required} placeholder={t(field.ar, field.en)}/>}</label>)}</div><div className="module-form-actions"><button type="button" className="button button-outline" onClick={() => setFormOpen(false)}>{t('إلغاء','Cancel')}</button><button className="button button-primary" disabled={busy}>{busy ? t('جارٍ الحفظ…','Saving…') : t('حفظ السجل','Save record')}</button></div></form>}
       {loading ? <div className="module-empty"><RefreshCw className="spin" size={18}/>{t('جارٍ تحميل السجلات…','Loading records…')}</div> : visible.length === 0 ? <div className="module-empty"><span>{t('لا توجد سجلات مطابقة. أضف أول سجل للبدء.','No matching records. Add your first record to get started.')}</span></div> : <div className="module-record-list">
-        {visible.map((record) => <ModuleRecordRow key={record.id} record={record} module={module} lang={lang} onUpdate={updateStatus} onAddPoints={addPoints}/>) }
+        {visible.map((record) => <ModuleRecordRow key={record.id} record={record} module={module} lang={lang} canManage={canManage} onUpdate={updateStatus} onAddPoints={addPoints} onDelete={deleteRecord}/>) }
       </div>}
       <div className="module-list-footer"><span>{t('السجلات المعروضة','Records shown')}: {visible.length}</span><span>{demoMode ? t('غير محفوظة','not saved') : t('تُحفظ محليًا','saved locally')}</span></div>
     </article>
@@ -178,7 +174,7 @@ export default function ModuleWorkspace({ module, lang, demoMode }: { module: Mo
   </section>;
 }
 
-function ModuleRecordRow({ record, module, lang, onUpdate, onAddPoints }: { record: ModuleRecord; module: ModuleName; lang: AppLanguage; onUpdate: (record: ModuleRecord, status: string) => void; onAddPoints: (record: ModuleRecord) => void }) {
+function ModuleRecordRow({ record, module, lang, canManage, onUpdate, onAddPoints, onDelete }: { record: ModuleRecord; module: ModuleName; lang: AppLanguage; canManage: boolean; onUpdate: (record: ModuleRecord, status: string) => void; onAddPoints: (record: ModuleRecord) => void; onDelete: (record: ModuleRecord) => void }) {
   const ar = lang === 'ar';
   const d = record.data;
   const status = text(d.status);
@@ -195,6 +191,7 @@ function ModuleRecordRow({ record, module, lang, onUpdate, onAddPoints }: { reco
     {module === 'crm' && <div className="module-record-extra"><strong>{Number(d.points || 0).toLocaleString(ar ? 'ar-SA' : 'en-US')}</strong><small>{t('نقطة','points')}</small></div>}
     {module === 'crm' && <span className={`status-chip ${d.segment === 'vip' ? 'amber' : d.segment === 'regular' ? 'green' : 'slate'}`}><i/>{statusLabel(text(d.segment) || 'new_customer')}</span>}
     {module !== 'crm' && <span className={`status-chip ${labelClass}`}><i/>{statusLabel(status)}</span>}
-    {module === 'crm' ? <button className="button button-outline compact" onClick={() => onAddPoints(record)}>{t('+١٠ نقاط','+10 points')}</button> : action && <button className="button button-outline compact" onClick={() => onUpdate(record, action!.next)}>{action.label}</button>}
+    {canManage && (module === 'crm' ? <button className="button button-outline compact" onClick={() => onAddPoints(record)}>{t('+١٠ نقاط','+10 points')}</button> : action && <button className="button button-outline compact" onClick={() => onUpdate(record, action!.next)}>{action.label}</button>)}
+    {canManage && <button className="icon-button danger-action" onClick={() => void onDelete(record)} aria-label={t('حذف السجل','Delete record')} title={t('حذف بصلاحية المدير','Delete as administrator')}><Trash2 size={15}/></button>}
   </div>;
 }

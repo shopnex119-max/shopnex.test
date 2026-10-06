@@ -7,13 +7,8 @@ import InvoiceReceipt, { buildDemoQrPayload, type InvoiceReceiptPayload } from '
 type InvoiceRecord = { id: string; invoiceId?: string; name: string; date: string; channel: string; amount: string; state: string; invoiceType: 'tax' | 'simplified' | 'demo'; uploadStatus: 'uploaded' | 'not_uploaded' };
 type ReceiptState = { invoice: InvoiceReceiptPayload; qrBase64: string | null; qrDisclaimer: string; sellerName?: string; vatNumber?: string; demoMode: boolean };
 
-const demoRecords: InvoiceRecord[] = [
-  { id: 'INV-2048', name: 'مؤسسة الندى التجارية', date: '02 أكتوبر 2026', channel: 'نقطة بيع — العليا', amount: '2875.00', state: 'مدفوعة', invoiceType: 'tax', uploadStatus: 'not_uploaded' },
-  { id: 'INV-2047', name: 'شركة مدار التقنية', date: '02 أكتوبر 2026', channel: 'مبيعات — جدة', amount: '1240.50', state: 'بانتظار الدفع', invoiceType: 'simplified', uploadStatus: 'not_uploaded' },
-  { id: 'INV-2046', name: 'عميل نقدي', date: '02 أكتوبر 2026', channel: 'نقطة بيع — العليا', amount: '386.00', state: 'مدفوعة', invoiceType: 'simplified', uploadStatus: 'not_uploaded' },
-  { id: 'INV-2045', name: 'روائع المنزل', date: '01 أكتوبر 2026', channel: 'مبيعات — الخبر', amount: '5100.00', state: 'مسودة', invoiceType: 'tax', uploadStatus: 'not_uploaded' },
-  { id: 'INV-2044', name: 'مؤسسة بريق', date: '01 أكتوبر 2026', channel: 'نقطة بيع — الدمام', amount: '820.00', state: 'مدفوعة', invoiceType: 'simplified', uploadStatus: 'not_uploaded' },
-];
+const demoRecords: InvoiceRecord[] = [];
+
 
 function toMinor(value: string | number): bigint {
   const match = String(value).trim().match(/^(-?)(\d+)(?:\.(\d*))?$/);

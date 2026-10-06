@@ -84,6 +84,7 @@ export default function App() {
   const isAr = lang === 'ar';
   const t = (ar: string, en: string) => isAr ? ar : en;
   const activePage = useMemo(() => page === 'coming-soon' && comingPage ? comingPage : nav.find((item) => item.key === page && item.ready) ?? nav[0], [page, comingPage]);
+  const canManageRecords = authMode === 'demo' || (authMode === 'authenticated' && ['super admin', 'company admin', 'admin', 'owner'].includes((profile?.role ?? '').trim().toLowerCase()));
   const groups = useMemo(() => {
     const filtered = nav.filter((item) => `${item.label} ${item.labelEn}`.toLowerCase().includes(query.toLowerCase()));
     return [...new Set(filtered.map((item) => isAr ? item.group : item.groupEn))].map((group) => ({
@@ -155,11 +156,11 @@ export default function App() {
           {page === 'inventory' && <InventoryPage lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'inventory-count' && <InventoryCountPage lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'products' && <InventoryPage lang={lang} productsOnly demoMode={authMode === 'demo'}/>}
-          {page === 'restaurant' && <ModuleWorkspace module="restaurant" lang={lang} demoMode={authMode === 'demo'}/>}
+          {page === 'restaurant' && <ModuleWorkspace module="restaurant" lang={lang} demoMode={authMode === 'demo'} canManage={canManageRecords}/>}
           {page === 'kitchen' && <KitchenPage lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'guest' && <GuestPage lang={lang} demoMode={authMode === 'demo'}/>}
-          {page === 'crm' && <ModuleWorkspace module="crm" lang={lang} demoMode={authMode === 'demo'}/>}
-          {page === 'hr' && <ModuleWorkspace module="hr" lang={lang} demoMode={authMode === 'demo'}/>}
+          {page === 'crm' && <ModuleWorkspace module="crm" lang={lang} demoMode={authMode === 'demo'} canManage={canManageRecords}/>}
+          {page === 'hr' && <ModuleWorkspace module="hr" lang={lang} demoMode={authMode === 'demo'} canManage={canManageRecords}/>}
           {page === 'settings' && <SettingsPage lang={lang} demoMode={authMode === 'demo'} canReset={authMode === 'demo' || (authMode === 'authenticated' && ['super admin', 'company admin', 'admin', 'owner'].includes((profile?.role ?? '').trim().toLowerCase()))} onNavigateToZatca={() => { setSensitiveUnlockFor(null); setPage('zatca'); }} />}
           {page === 'coming-soon' && <ComingSoon lang={lang} title={isAr ? comingPage?.label : comingPage?.labelEn}/>}
           {page === 'purchasing' && <PurchasingPage lang={lang} demoMode={authMode === 'demo'}/>}

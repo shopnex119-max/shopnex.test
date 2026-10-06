@@ -3,11 +3,8 @@ import { Check, ChefHat, Clock3, Flame, RefreshCw, Utensils, Volume2 } from 'luc
 import type { AppLanguage } from '../../app/types';
 import { getModuleRecords, updateModuleRecord, type ModuleRecord } from '../../app/api';
 
-const preview: ModuleRecord[] = [
-  { id: 'kds-1048', module: 'restaurant', created_at: '', updated_at: '', data: { type: 'order', name: 'طلب #1048', location: 'طاولة 03 · داخل المطعم', amount: '85.00', status: 'new', items: [{ name: 'برجر لحم كلاسيكي', quantity: 2, note: 'بدون بصل' }, { name: 'بطاطس مقرمشة', quantity: 1, note: '' }], priority: 'normal' } },
-  { id: 'kds-1049', module: 'restaurant', created_at: '', updated_at: '', data: { type: 'order', name: 'طلب #1049', location: 'سفري · استلام', amount: '64.00', status: 'preparing', items: [{ name: 'بيتزا مارغريتا', quantity: 1, note: 'مقرمشة' }, { name: 'قهوة اليوم', quantity: 1, note: '' }], priority: 'urgent' } },
-  { id: 'kds-1050', module: 'restaurant', created_at: '', updated_at: '', data: { type: 'order', name: 'طلب #1050', location: 'طاولة 11 · داخل المطعم', amount: '38.00', status: 'ready', items: [{ name: 'بيتزا مارغريتا', quantity: 1, note: 'تقطيع ٦ قطع' }], priority: 'normal' } },
-];
+const preview: ModuleRecord[] = [];
+
 const stages = [
   { key: 'new', ar: 'طلبات جديدة', en: 'New orders', color: 'new' },
   { key: 'preparing', ar: 'قيد التحضير', en: 'Preparing', color: 'preparing' },

@@ -7,6 +7,7 @@ from app.db.models import User
 from app.db.session import get_db
 
 _bearer = HTTPBearer(auto_error=False)
+ADMIN_ROLES = frozenset({'super admin', 'company admin', 'admin', 'owner'})
 
 
 def require_user(
@@ -21,4 +22,10 @@ def require_user(
     user = db.get(User, user_id)
     if user is None or not user.active:
         raise HTTPException(status_code=401, detail="User session is no longer valid")
+    return user
+
+
+def require_admin(user: User = Depends(require_user)) -> User:
+    if user.role.strip().casefold() not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Administrator permission is required")
     return user

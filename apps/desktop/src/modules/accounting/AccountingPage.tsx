@@ -2,23 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { AlertTriangle, BookOpen, CheckCircle2, FileCheck2, Plus, ReceiptText, RefreshCw, Scale, ShieldCheck, Wallet } from 'lucide-react';
 import type { AppLanguage } from '../../app/types';
 import { createTaxRule, getJournals, getPayables, getReceivables, getTaxRules, getTrialBalance, type TrialBalanceRow } from '../../app/api';
-import { formatValue, parseMinor, toDecimalString } from '../../app/finance';
+import { formatValue, parseMinor } from '../../app/finance';
 
 type Props = { lang: AppLanguage; demoMode: boolean };
 type Tab = 'trial' | 'journals' | 'balances' | 'tax';
-const demoAccounts: TrialBalanceRow[] = [
-  ['1000','cash','الصندوق','Cash','asset','debit','0.00','0.00'],
-  ['1010','bank','البنك / شبكة','Bank / card clearing','asset','debit','0.00','0.00'],
-  ['1100','receivable','العملاء المدينون','Accounts receivable','asset','debit','0.00','0.00'],
-  ['1200','inventory','المخزون','Inventory','asset','debit','0.00','0.00'],
-  ['2100','payable','الموردون الدائنون','Accounts payable','liability','credit','0.00','0.00'],
-  ['2200','vat_output','ضريبة مخرجات مستحقة','VAT payable','liability','credit','0.00','0.00'],
-  ['2210','vat_input','ضريبة مدخلات قابلة للاسترداد','Input VAT','asset','debit','0.00','0.00'],
-  ['3000','equity','رأس المال / حقوق الملكية','Owner equity','equity','credit','0.00','0.00'],
-  ['4000','sales','إيرادات المبيعات','Sales revenue','revenue','credit','0.00','0.00'],
-  ['5000','cogs','تكلفة البضاعة المباعة','Cost of goods sold','expense','debit','0.00','0.00'],
-  ['6100','operating_expense','مصروفات تشغيلية','Operating expenses','expense','debit','0.00','0.00'],
-].map(([code,system_key,name_ar,name_en,account_type,normal_side,debit_total,credit_total], index) => ({ id: `demo-account-${index}`, code: String(code), system_key: String(system_key), name_ar: String(name_ar), name_en: String(name_en), account_type: String(account_type), normal_side: String(normal_side), debit_total, credit_total, balance: toDecimalString(normal_side === 'debit' ? parseMinor(debit_total) - parseMinor(credit_total) : parseMinor(credit_total) - parseMinor(debit_total)) }));
+const demoAccounts: TrialBalanceRow[] = [];
+
 const demoJournals: any[] = [];
 const demoRules = [
   { id:'r1',code:'SHOPNEX-STD-15',version:1,name_ar:'ضريبة قياسية',name_en:'Standard VAT',category:'standard',rate:'15.00',effective_from:'2020-07-01',effective_to:null,reason_required:false,code_scope:'internal_shopnex_code_not_zatca_code' },

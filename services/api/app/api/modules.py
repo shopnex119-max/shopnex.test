@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.zatca import DEFAULT_COMPANY_ID, _company
-from app.core.auth import require_user
+from app.core.auth import require_admin, require_user
 from app.db.models import ModuleRecord, User
 from app.db.session import get_db
 
@@ -142,7 +142,7 @@ def create_record(module: ModuleName, payload: ModuleRecordInput, db: Session = 
 
 
 @router.put("/{module}/records/{record_id}", response_model=ModuleRecordOutput)
-def update_record(module: ModuleName, record_id: str, payload: ModuleRecordInput, db: Session = Depends(get_db), _user: User = Depends(require_user)):
+def update_record(module: ModuleName, record_id: str, payload: ModuleRecordInput, db: Session = Depends(get_db), _user: User = Depends(require_admin)):
     record = _record_or_404(db, module, record_id)
     record.data = _validated(module, payload.data)
     db.commit()
@@ -151,7 +151,7 @@ def update_record(module: ModuleName, record_id: str, payload: ModuleRecordInput
 
 
 @router.delete("/{module}/records/{record_id}", status_code=204)
-def delete_record(module: ModuleName, record_id: str, db: Session = Depends(get_db), _user: User = Depends(require_user)):
+def delete_record(module: ModuleName, record_id: str, db: Session = Depends(get_db), _user: User = Depends(require_admin)):
     record = _record_or_404(db, module, record_id)
     db.delete(record)
     db.commit()
