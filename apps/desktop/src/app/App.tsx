@@ -14,6 +14,7 @@ import Dashboard from '../modules/dashboard/Dashboard';
 import ZatcaPage from '../modules/zatca/ZatcaPage';
 import OperationsPage from '../modules/sales/OperationsPage';
 import InventoryPage from '../modules/inventory/InventoryPage';
+import InventoryCountPage from '../modules/inventory/InventoryCountPage';
 import SettingsPage from '../modules/setup/SettingsPage';
 import ModuleWorkspace from '../modules/workspace/ModuleWorkspace';
 import PosPage from '../modules/pos/PosPage';
@@ -29,6 +30,7 @@ const nav: AppPage[] = [
   { key: 'invoices', label: 'الفواتير والمبيعات', labelEn: 'Invoices & sales', icon: 'invoice', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'purchasing', label: 'المشتريات', labelEn: 'Purchasing', icon: 'purchase', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'inventory', label: 'المخزون والمستودعات', labelEn: 'Inventory & warehouses', icon: 'inventory', group: 'التشغيل', groupEn: 'Operations', ready: true },
+  { key: 'inventory-count', label: 'الجرد والتسويات', labelEn: 'Stock count & adjustments', icon: 'inventory', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'products', label: 'المنتجات', labelEn: 'Products', icon: 'products', group: 'التشغيل', groupEn: 'Operations', ready: true },
   { key: 'customers', label: 'العملاء والموردون', labelEn: 'Customers & suppliers', icon: 'users', group: 'العلاقات', groupEn: 'Relationships', ready: true },
   { key: 'restaurant', label: 'المطاعم والمطبخ', labelEn: 'Restaurant & kitchen', icon: 'kitchen', group: 'الضيافة', groupEn: 'Hospitality', ready: true },
@@ -151,6 +153,7 @@ export default function App() {
           {page === 'sales' && <PosPage lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'invoices' && <OperationsPage lang={lang} mode="invoices" demoMode={authMode === 'demo'}/>}
           {page === 'inventory' && <InventoryPage lang={lang} demoMode={authMode === 'demo'}/>}
+          {page === 'inventory-count' && <InventoryCountPage lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'products' && <InventoryPage lang={lang} productsOnly demoMode={authMode === 'demo'}/>}
           {page === 'restaurant' && <ModuleWorkspace module="restaurant" lang={lang} demoMode={authMode === 'demo'}/>}
           {page === 'kitchen' && <KitchenPage lang={lang} demoMode={authMode === 'demo'}/>}
