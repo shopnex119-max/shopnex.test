@@ -47,7 +47,7 @@ jobs:
       - name: Build browser-local interactive preview
         run: pnpm --dir apps/desktop build
         env:
-          VITE_BASE_PATH: ./
+          VITE_BASE_PATH: /shopnex.test/
           VITE_PUBLIC_PREVIEW: 'true'
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v4
